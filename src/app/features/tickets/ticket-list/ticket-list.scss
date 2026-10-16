@@ -1,0 +1,56 @@
+@use '../../../../styles/status-pills' as pills;
+
+// Shared with the ticket detail. See styles/_status-pills.scss for why these are not Material's own
+// colour roles.
+@include pills.pills;
+
+.page {
+  // Wider than the default: eight columns of ticket metadata need the room, and somebody scanning a
+  // triage queue reads across a row rather than down a paragraph.
+  --page-max: 92rem;
+}
+
+.tickets-link {
+  color: var(--mat-sys-primary);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+  }
+}
+
+.tickets-title {
+  max-width: 24rem;
+
+  span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.tickets-app {
+  display: block;
+  font-weight: 500;
+
+  + small {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.tickets-unassigned {
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+}
+
+// Tabular figures so the dates line up vertically, which is most of what makes a date column
+// scannable rather than merely present.
+.mat-column-createdAt {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--mat-sys-on-surface-variant);
+}

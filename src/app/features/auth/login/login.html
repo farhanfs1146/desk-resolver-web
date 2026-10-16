@@ -1,0 +1,115 @@
+<main class="login">
+  <!-- The brand panel. Entirely decorative: nothing in it is a control, and none of it is needed to
+       sign in - which is why it is the half that disappears below 900px rather than the form. -->
+  <section class="login-hero stagger" aria-hidden="true">
+    <div class="hero-brand">
+      <span class="hero-mark">
+        <mat-icon class="icon-filled">support_agent</mat-icon>
+      </span>
+      <span class="hero-wordmark">DeskResolver</span>
+    </div>
+
+    <div class="hero-copy">
+      <h2>Every request, in one queue.</h2>
+      <p>
+        Raise a ticket against the application it concerns, watch it move through triage, and keep
+        the whole conversation attached to it.
+      </p>
+    </div>
+
+    <ul class="hero-points">
+      <li>
+        <mat-icon>bolt</mat-icon>
+        <span>Priority and deadline on every ticket</span>
+      </li>
+      <li>
+        <mat-icon>forum</mat-icon>
+        <span>Comments, attachments and a full history</span>
+      </li>
+      <li>
+        <mat-icon>shield</mat-icon>
+        <span>Role-based access, enforced server side</span>
+      </li>
+    </ul>
+  </section>
+
+  <section class="login-panel">
+    <div class="login-form-wrap">
+      <!-- Shown only below 900px, where the hero panel is gone and the form would otherwise open on
+           a screen that never says what it belongs to. -->
+      <div class="login-compact-brand">
+        <span class="hero-mark" aria-hidden="true">
+          <mat-icon class="icon-filled">support_agent</mat-icon>
+        </span>
+        <span>DeskResolver</span>
+      </div>
+
+      <h1>Sign in</h1>
+      <p class="login-lede">Use the work account an administrator set up for you.</p>
+
+      <form [formGroup]="form" (ngSubmit)="submit()" class="login-form">
+        <mat-form-field appearance="outline">
+          <mat-label>Work email</mat-label>
+          <mat-icon matPrefix>mail</mat-icon>
+          <input matInput type="email" formControlName="email" autocomplete="username" required />
+          @if (form.controls.email.touched && form.controls.email.hasError('required')) {
+            <mat-error>Enter your work email address.</mat-error>
+          } @else if (form.controls.email.touched && form.controls.email.hasError('email')) {
+            <mat-error>That does not look like an email address.</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Password</mat-label>
+          <mat-icon matPrefix>lock</mat-icon>
+          <input
+            matInput
+            [type]="passwordVisible() ? 'text' : 'password'"
+            formControlName="password"
+            autocomplete="current-password"
+            required
+          />
+          <button
+            matIconButton
+            type="button"
+            matSuffix
+            (click)="togglePasswordVisible()"
+            [attr.aria-label]="passwordVisible() ? 'Hide password' : 'Show password'"
+            [attr.aria-pressed]="passwordVisible()"
+          >
+            <mat-icon>{{ passwordVisible() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          @if (form.controls.password.touched && form.controls.password.hasError('required')) {
+            <mat-error>Enter your password.</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- aria-live so a screen reader announces the failure; it appears without focus moving. -->
+        <p class="login-error" role="alert" aria-live="assertive">
+          @if (errorMessage()) {
+            <mat-icon aria-hidden="true">error</mat-icon>
+            <span>{{ errorMessage() }}</span>
+          }
+        </p>
+
+        <!-- The spinner and the arrow are each the only node in their own block, rather than one
+             `@if/@else` holding both plus the label. `iconPositionEnd` is a content-projection slot
+             on MatButton, and a block with several root nodes is not projected into it - the icon
+             would render inline, before the text, which is the opposite of what the name asks for. -->
+        <button matButton="filled" class="login-submit" type="submit" [disabled]="submitting()">
+          @if (submitting()) {
+            <mat-spinner diameter="18" aria-hidden="true" />
+          }
+          <span>{{ submitting() ? 'Signing in...' : 'Sign in' }}</span>
+          @if (!submitting()) {
+            <mat-icon iconPositionEnd>arrow_forward</mat-icon>
+          }
+        </button>
+      </form>
+
+      <p class="login-foot">
+        No account? Accounts are created by an administrator - there is no self sign-up.
+      </p>
+    </div>
+  </section>
+</main>

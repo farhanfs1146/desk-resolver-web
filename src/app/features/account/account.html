@@ -1,0 +1,80 @@
+<section class="page">
+  <header class="page-head">
+    <div class="page-heading">
+      <span class="page-icon" aria-hidden="true">
+        <mat-icon>badge</mat-icon>
+      </span>
+      <div>
+        <h1 class="page-title">My access</h1>
+        <p class="page-lede">What this account is, and what it is allowed to do.</p>
+      </div>
+    </div>
+
+    <div class="page-actions">
+      <button matButton="outlined" type="button" (click)="changePassword()">
+        <mat-icon>key</mat-icon>
+        Change password
+      </button>
+    </div>
+  </header>
+
+  @if (identity(); as who) {
+    <div class="surface account-identity">
+      <span class="avatar avatar-xl" aria-hidden="true">{{ initials() }}</span>
+      <div class="account-identity-text">
+        <strong>{{ who.fullName }}</strong>
+        <small>Account #{{ who.userId }}</small>
+      </div>
+    </div>
+
+    <div class="surface account-panel">
+      <div class="surface-head">
+        <h2>Roles</h2>
+        <span class="account-count">{{ who.roles.length }}</span>
+      </div>
+      <div class="surface-pad">
+        <p class="account-note">
+          Roles are granted by an administrator. Holding several widens access - permissions are a
+          union, never a narrowing.
+        </p>
+        <ul class="chips">
+          @for (role of who.roles; track role) {
+            <li>{{ role }}</li>
+          } @empty {
+            <li class="none">none</li>
+          }
+        </ul>
+      </div>
+    </div>
+
+    <div class="surface account-panel">
+      <div class="surface-head">
+        <h2>Permissions</h2>
+        <span class="account-count">{{ permissions().length }}</span>
+      </div>
+      <div class="surface-pad">
+        <p class="account-note">
+          What the roles above add up to. Every screen and button in DeskResolver is decided by this
+          list.
+        </p>
+        <ul class="chips chips-permission">
+          @for (permission of permissions(); track permission) {
+            <li>{{ permission }}</li>
+          } @empty {
+            <li class="none">none</li>
+          }
+        </ul>
+      </div>
+    </div>
+
+    <!-- Said here as well as in the dialog, because it is the kind of consequence somebody should
+         meet before they open the form rather than inside it. -->
+    <p class="page-note">
+      <mat-icon aria-hidden="true">info</mat-icon>
+      <span>
+        Changing your password signs you out of every session, this one included - the API revokes
+        them all. You will be asked to sign in again straight away.
+      </span>
+    </p>
+  }
+</section>

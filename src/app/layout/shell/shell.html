@@ -1,0 +1,282 @@
+<div class="frame" [class.frame-collapsed]="collapsed()" [class.frame-compact]="compact()">
+  <!-- The drawer's scrim. A button rather than a div: dismissing an overlay by clicking away has to
+       be reachable from the keyboard too, and Escape alone is not discoverable. -->
+  @if (compact() && drawerOpen()) {
+    <button
+      class="scrim"
+      type="button"
+      aria-label="Close navigation"
+      (click)="closeDrawer()"
+    ></button>
+  }
+
+  <aside
+    class="app-rail"
+    [class.rail-open]="drawerOpen()"
+    [attr.inert]="compact() && !drawerOpen() ? '' : null"
+  >
+    <div class="rail-brand">
+      <span class="brand-mark" aria-hidden="true">
+        <mat-icon class="icon-filled">support_agent</mat-icon>
+      </span>
+      <span class="brand-text">
+        <strong>DeskResolver</strong>
+        <small>Help desk</small>
+      </span>
+
+      <!-- Icon only, and beside the brand rather than at the foot of the rail: this control acts on
+           the rail itself, so it belongs where the rail begins. A label would be the one piece of
+           text in the rail that names a control instead of a destination.
+
+           Hidden on a compact viewport, where the drawer is already full width and collapsing it to
+           icons would be a control with nothing to do - the header's menu button closes it there. -->
+      @if (!compact()) {
+        <button
+          class="rail-toggle"
+          type="button"
+          (click)="toggleRail()"
+          [matTooltip]="collapsed() ? 'Expand navigation' : 'Collapse navigation'"
+          matTooltipPosition="right"
+          [attr.aria-expanded]="!collapsed()"
+          aria-label="Toggle navigation width"
+        >
+          <mat-icon aria-hidden="true">{{
+            collapsed() ? 'chevron_right' : 'chevron_left'
+          }}</mat-icon>
+        </button>
+      }
+    </div>
+
+    <nav class="rail-nav" aria-label="Main">
+      @for (section of sections(); track section.label) {
+        <p class="rail-section" [attr.aria-hidden]="collapsed() ? 'true' : null">
+          {{ section.label }}
+        </p>
+
+        @for (link of section.links; track link.path) {
+          <a
+            class="rail-link"
+            [routerLink]="link.path"
+            routerLinkActive="rail-link-active"
+            [routerLinkActiveOptions]="{ exact: link.exact }"
+            [matTooltip]="collapsed() ? link.label : ''"
+            matTooltipPosition="right"
+          >
+            <mat-icon aria-hidden="true">{{ link.icon }}</mat-icon>
+            <span class="rail-label">{{ link.label }}</span>
+          </a>
+        }
+      }
+    </nav>
+
+    <div class="rail-foot">
+      @if (identity(); as who) {
+        <a
+          class="rail-user"
+          routerLink="/account"
+          [matTooltip]="collapsed() ? who.fullName : ''"
+          matTooltipPosition="right"
+        >
+          <span class="avatar avatar-sm" aria-hidden="true">{{ initials() }}</span>
+          <span class="rail-user-text">
+            <strong>{{ who.fullName }}</strong>
+            <small>{{ who.roles.join(', ') || 'No roles' }}</small>
+          </span>
+        </a>
+      }
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <header class="app-header">
+      @if (compact()) {
+        <button
+          matIconButton
+          type="button"
+          (click)="toggleRail()"
+          [attr.aria-expanded]="drawerOpen()"
+          aria-label="Open navigation"
+        >
+          <mat-icon>menu</mat-icon>
+        </button>
+      }
+
+      <div class="header-title">
+        <span class="header-icon" aria-hidden="true">
+          <mat-icon>{{ crumb().icon }}</mat-icon>
+        </span>
+        <span class="header-text">
+          @if (crumb().parent) {
+            <small class="header-crumb">{{ crumb().parent }}</small>
+          }
+          <h1>{{ crumb().heading }}</h1>
+        </span>
+      </div>
+
+      <span class="header-spacer"></span>
+
+      <!-- The screen's own primary action lives on the screen; this is the one action worth having
+           on every screen, because raising a ticket is what most people opened the application to
+           do. Label hidden below 640px, where the icon alone has to carry it. -->
+      @if (canCreate()) {
+        <a matButton="filled" class="header-cta" routerLink="/tickets/new">
+          <mat-icon>add</mat-icon>
+          <span class="cta-label">New ticket</span>
+        </a>
+      }
+
+      <button
+        matIconButton
+        type="button"
+        (click)="theme.cycle()"
+        [matTooltip]="theme.appearance().label"
+        [attr.aria-label]="theme.appearance().label + ' - click to change'"
+      >
+        <mat-icon>{{ theme.appearance().icon }}</mat-icon>
+      </button>
+
+      <button
+        matIconButton
+        type="button"
+        [matMenuTriggerFor]="alertsMenu"
+        (menuOpened)="notifications.refresh()"
+        matTooltip="Notifications"
+        [attr.aria-label]="
+          notifications.count() === 1
+            ? '1 unread notification'
+            : notifications.count() + ' unread notifications'
+        "
+      >
+        <!-- `matBadgeHidden` rather than an `@if` around the icon: the badge is a decoration on the
+             bell, and removing the bell to remove the badge would move everything beside it. -->
+        <mat-icon
+          [matBadge]="notifications.count()"
+          [matBadgeHidden]="notifications.count() === 0"
+          [matBadgeColor]="notifications.urgent() ? 'warn' : 'accent'"
+          matBadgeSize="small"
+          aria-hidden="true"
+        >
+          {{ notifications.count() > 0 ? 'notifications_active' : 'notifications' }}
+        </mat-icon>
+      </button>
+
+      @if (identity(); as who) {
+        <button
+          class="header-account"
+          type="button"
+          [matMenuTriggerFor]="accountMenu"
+          [attr.aria-label]="'Account menu for ' + who.fullName"
+        >
+          <span class="avatar" aria-hidden="true">{{ initials() }}</span>
+          <mat-icon class="header-account-chevron" aria-hidden="true">expand_more</mat-icon>
+        </button>
+      }
+    </header>
+
+    <main class="app-content">
+      <router-outlet />
+    </main>
+  </div>
+</div>
+
+<!-- -----------------------------------------------------------------------------------------------
+     Overlays. Declared outside `.frame` because Material renders them into its own overlay
+     container anyway; keeping them here makes that obvious rather than looking like a nesting bug.
+     ----------------------------------------------------------------------------------------------- -->
+
+<mat-menu #alertsMenu class="menu-panel menu-alerts">
+  <!-- stopPropagation on the header and footer because they are not menu items: without it a click
+       anywhere in them closes the panel, which makes "Mark all read" close the thing it just
+       emptied before the reader can see that it worked. -->
+  <div class="menu-head" (click)="$event.stopPropagation()">
+    <strong>Notifications</strong>
+
+    <span class="menu-head-actions">
+      @if (notifications.loading()) {
+        <mat-spinner diameter="16" aria-label="Refreshing" />
+      }
+      @if (notifications.hasUnread()) {
+        <button
+          matButton
+          type="button"
+          class="menu-head-button"
+          (click)="notifications.markAllRead()"
+        >
+          Mark all read
+        </button>
+      }
+    </span>
+  </div>
+
+  @if (notifications.failed()) {
+    <div class="menu-empty" role="alert">
+      <mat-icon aria-hidden="true">cloud_off</mat-icon>
+      <p>Notifications could not be loaded.</p>
+      <button matButton type="button" (click)="notifications.refresh()">Try again</button>
+    </div>
+  } @else {
+    @for (line of notifications.list(); track line.id) {
+      <button
+        mat-menu-item
+        type="button"
+        class="alert-row"
+        [class.alert-unread]="line.unread"
+        (click)="openNotification(line)"
+      >
+        <mat-icon [class]="'alert-' + line.tone">{{ line.icon }}</mat-icon>
+        <span class="alert-text">
+          <strong>{{ line.title }}</strong>
+          <small>{{ line.detail }}</small>
+          <!-- An instant from the API; the pipe renders it in the reader's own zone. -->
+          <time class="alert-when" [attr.datetime]="line.at">{{
+            line.at | date: 'd MMM, HH:mm'
+          }}</time>
+        </span>
+        @if (line.unread) {
+          <span class="alert-dot" aria-label="Unread"></span>
+        }
+      </button>
+    } @empty {
+      <div class="menu-empty">
+        <mat-icon aria-hidden="true">notifications_off</mat-icon>
+        <p>Nothing needs your attention</p>
+      </div>
+    }
+  }
+
+  <!-- Said rather than left to be inferred. Opening a notification marks it read, which is a side
+       effect worth declaring once here instead of surprising somebody who only wanted to look. -->
+  <div class="menu-foot" (click)="$event.stopPropagation()">
+    Opening a notification marks it read.
+  </div>
+</mat-menu>
+
+<mat-menu #accountMenu class="menu-panel">
+  @if (identity(); as who) {
+    <div class="menu-identity" (click)="$event.stopPropagation()">
+      <span class="avatar avatar-lg" aria-hidden="true">{{ initials() }}</span>
+      <span class="menu-identity-text">
+        <strong>{{ who.fullName }}</strong>
+        <small>{{ who.roles.join(', ') || 'No roles' }}</small>
+      </span>
+    </div>
+
+    <mat-divider />
+
+    <a mat-menu-item routerLink="/account">
+      <mat-icon>badge</mat-icon>
+      <span>My access</span>
+    </a>
+    <button mat-menu-item type="button" (click)="theme.cycle()">
+      <mat-icon>{{ theme.appearance().icon }}</mat-icon>
+      <span>{{ theme.appearance().label }}</span>
+    </button>
+
+    <mat-divider />
+
+    <button mat-menu-item type="button" class="menu-danger" (click)="signOut()">
+      <mat-icon>logout</mat-icon>
+      <span>Sign out</span>
+    </button>
+  }
+</mat-menu>

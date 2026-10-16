@@ -1,0 +1,486 @@
+// The frame: a fixed-width rail beside a column that scrolls under a sticky header.
+//
+// `grid-template-columns` on one element is what makes the two states cheap. Collapsing the rail
+// changes a single track width, so the content reflows without anything being repositioned - and the
+// transition is one property rather than a margin on the rail plus a padding on the content kept in
+// agreement by hand.
+
+:host {
+  display: block;
+}
+
+.frame {
+  --rail-width: 16rem;
+  --rail-width-collapsed: 4.5rem;
+  --header-height: 4rem;
+
+  display: grid;
+  grid-template-columns: var(--rail-width) minmax(0, 1fr);
+  min-height: 100dvh;
+  // `ease-inout` rather than `ease`: the rail collapses and expands, and a decelerating curve played
+  // in reverse accelerates into its end state, which reads as the panel being dropped.
+  transition: grid-template-columns var(--app-dur-base) var(--app-ease-inout);
+}
+
+.frame-collapsed {
+  grid-template-columns: var(--rail-width-collapsed) minmax(0, 1fr);
+}
+
+// Below 1024px the rail leaves the grid entirely and becomes an overlay, so the content column gets
+// the full width rather than being squeezed beside something a ticket table cannot share with.
+.frame-compact {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+// -------------------------------------------------------------------------------------------------
+// Rail
+// -------------------------------------------------------------------------------------------------
+
+.app-rail {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  // padding: 0.875rem 0.625rem; // this comment fix my scrool misbehaviour issue
+  gap: 0.5rem;
+  background-color: var(--app-rail-bg);
+  color: var(--app-rail-fg);
+  border-right: 1px solid var(--app-rail-border);
+  overflow: hidden;
+
+  // A faint wash from the brand hue at the top, so the rail is not a flat block of near-black. It
+  // is behind the content rather than on it, which is why nothing inside needs a z-index.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 14rem;
+    background: radial-gradient(120% 80% at 0% 0%, rgb(109 59 215 / 35%) 0%, transparent 70%);
+    pointer-events: none;
+  }
+}
+
+.frame-compact .app-rail {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 40;
+  width: min(17rem, 84vw);
+  transform: translateX(-100%);
+  // `slow`, uniquely in this file: the drawer crosses its own width, and at `base` it arrives before
+  // the eye has followed it. Everything else here changes in place.
+  transition: transform var(--app-dur-slow) var(--app-ease-inout);
+  box-shadow: var(--app-shadow-lg);
+
+  &.rail-open {
+    transform: translateX(0);
+  }
+}
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  border: none;
+  padding: 0;
+  background-color: rgb(8 9 18 / 55%);
+  backdrop-filter: blur(2px);
+  cursor: pointer;
+}
+
+.rail-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.375rem 0.5rem 0.875rem;
+  position: relative;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 11px;
+  background: var(--app-gradient);
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgb(109 59 215 / 45%);
+
+  .mat-icon {
+    font-size: 1.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+
+  strong {
+    font: var(--mat-sys-title-small);
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+
+  small {
+    font: var(--mat-sys-label-small);
+    color: var(--app-rail-muted);
+  }
+}
+
+// The rail's own collapse control: icon only, pushed to the far edge of the brand row.
+//
+// Quiet until approached, because it is chrome rather than a destination - at full opacity beside
+// the brand mark it competes with it, and it is the one control in the rail nobody needs to find on
+// their first visit. It still meets contrast when focused or hovered, and `:focus-visible` is
+// included so reaching it by keyboard reveals it exactly as hovering does.
+.rail-toggle {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  margin-left: auto;
+  width: 1.875rem;
+  height: 1.875rem;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--app-rail-muted);
+  cursor: pointer;
+  opacity: 0.7;
+  transition:
+    background-color var(--app-dur-fast) var(--app-ease-inout),
+    color var(--app-dur-fast) var(--app-ease-inout),
+    opacity var(--app-dur-fast) var(--app-ease-inout);
+
+  .mat-icon {
+    font-size: 1.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(--app-rail-hover);
+    color: var(--app-rail-fg);
+    opacity: 1;
+  }
+}
+
+.rail-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  position: relative;
+}
+
+.rail-section {
+  margin: 0.875rem 0 0.25rem;
+  padding: 0 0.625rem;
+  font: var(--mat-sys-label-small);
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-rail-muted);
+
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
+.rail-link,
+.rail-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.625rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--app-rail-fg);
+  font: var(--mat-sys-body-medium);
+  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color var(--app-dur-fast) var(--app-ease-inout),
+    color var(--app-dur-fast) var(--app-ease-inout);
+
+  .mat-icon {
+    flex: 0 0 auto;
+    font-size: 1.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  &:hover {
+    background-color: var(--app-rail-hover);
+  }
+}
+
+.rail-link {
+  position: relative;
+  font-weight: 500;
+
+  // The active marker is a pseudo-element rather than a border, so it can be inset from the rounded
+  // corners - a border would trace them and read as an outline instead of an indicator.
+  &.rail-link-active {
+    background-color: var(--app-rail-active-bg);
+    color: var(--app-rail-active-fg);
+    font-weight: 600;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: -0.625rem;
+      top: 50%;
+      translate: 0 -50%;
+      width: 3px;
+      height: 1.25rem;
+      border-radius: 0 3px 3px 0;
+      background-color: #a4a1ff;
+      // The one piece of chrome that moves on navigation, and the reason the rail itself does not
+      // need to: the marker growing out of its own centre is what shows which item just became
+      // current. `transform-origin: center` with `scale` on the Y axis only, so it does not drift
+      // vertically against the `translate` that centres it.
+      animation: app-marker-in var(--app-dur-base) var(--app-ease) both;
+    }
+
+    .mat-icon {
+      font-variation-settings:
+        'FILL' 1,
+        'wght' 500,
+        'GRAD' 0,
+        'opsz' 24;
+    }
+  }
+}
+
+.rail-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--app-rail-border);
+  position: relative;
+}
+
+.rail-user {
+  gap: 0.625rem;
+
+  .rail-user-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+    min-width: 0;
+
+    strong {
+      font: var(--mat-sys-body-small);
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    small {
+      font: var(--mat-sys-label-small);
+      color: var(--app-rail-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+}
+
+// Collapsed: labels are removed from the flow rather than hidden, so the icons centre in the
+// narrower track instead of staying left-aligned against empty space. The tooltip bound in the
+// template is what replaces the label, which is why removing it here costs nothing.
+.frame-collapsed {
+  .rail-label,
+  .brand-text,
+  .rail-user-text,
+  .rail-section {
+    display: none;
+  }
+
+  // Stacked rather than side by side: the mark and the toggle do not both fit across a 4.5rem
+  // track, and shrinking either to make them fit would leave two cramped targets instead of two
+  // comfortable ones.
+  .rail-brand {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding-inline: 0;
+  }
+
+  // `margin-left` is what pushed it to the brand row's far edge; in a column that would offset it.
+  .rail-toggle {
+    margin-left: 0;
+  }
+
+  .rail-link,
+  .rail-user {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .rail-link.rail-link-active::before {
+    display: none;
+  }
+
+  // Without a label to separate them the groups run together, so the divider does the work the
+  // heading did. `:not(:first-of-type)` because a rule above the first group would float.
+  .rail-section + .rail-link {
+    margin-top: 0.5rem;
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+// Header
+// -------------------------------------------------------------------------------------------------
+
+.app-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background-color: var(--app-canvas);
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: var(--header-height);
+  padding: 0 1rem;
+  background-color: var(--app-header-bg);
+  border-bottom: 1px solid var(--app-border);
+
+  // The blur is what lets the header stay translucent while content scrolls under it and still read
+  // as a surface. Without the fallback a browser without `backdrop-filter` gets unreadable text over
+  // moving rows, so the colour token is deliberately only 82% opaque rather than fully transparent.
+  backdrop-filter: blur(12px) saturate(140%);
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.header-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9px;
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent);
+  color: var(--mat-sys-primary);
+
+  .mat-icon {
+    font-size: 1.125rem;
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+
+.header-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+
+  h1 {
+    font: var(--mat-sys-title-medium);
+    font-weight: 650;
+    letter-spacing: -0.015em;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.header-crumb {
+  font: var(--mat-sys-label-small);
+  color: var(--mat-sys-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.header-spacer {
+  flex: 1 1 auto;
+}
+
+.header-cta {
+  margin-right: 0.25rem;
+}
+
+.header-account {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  margin-left: 0.25rem;
+  padding: 0.25rem 0.25rem 0.25rem 0.25rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color var(--app-dur-fast) var(--app-ease-inout);
+
+  &:hover {
+    background-color: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent);
+  }
+}
+
+.header-account-chevron {
+  font-size: 1.125rem;
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+@media (max-width: 639px) {
+  .app-header {
+    padding-inline: 0.5rem;
+  }
+
+  // Icon only below 640px. The button keeps its accessible name from the anchor's text, which stays
+  // in the DOM - this hides the label, it does not remove it.
+  .header-cta .cta-label {
+    display: none;
+  }
+
+  .header-icon {
+    display: none;
+  }
+}
+
+.app-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+// The active navigation marker's entrance. Scaled on Y alone: a marker 3px wide has no X to grow
+// along, and scaling both axes would make it thin out as it arrived.
+@keyframes app-marker-in {
+  from {
+    opacity: 0;
+    scale: 1 0.3;
+  }
+
+  to {
+    opacity: 1;
+    scale: 1 1;
+  }
+}

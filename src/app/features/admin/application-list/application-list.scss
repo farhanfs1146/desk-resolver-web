@@ -1,0 +1,40 @@
+.page {
+  --page-max: 68rem;
+}
+
+// Inactive rows stay legible but recede: they are still the catalogue, just not choosable.
+.apps-dim {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.apps-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 1rem;
+  font: var(--mat-sys-label-small);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.apps-on {
+  background-color: var(--app-success-container);
+  color: var(--app-success);
+}
+
+.apps-off {
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.apps-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+// Deactivating is the one action on this screen whose consequence is not local to it - nobody can
+// raise a ticket against an inactive application - so it is coloured as what it is.
+.apps-danger {
+  --mat-button-text-label-text-color: var(--mat-sys-error);
+}

@@ -1,0 +1,231 @@
+<section class="page">
+  <header class="page-head">
+    <div class="page-heading">
+      <span class="page-icon" aria-hidden="true">
+        <mat-icon>space_dashboard</mat-icon>
+      </span>
+      <div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-lede">{{ lede() }}</p>
+      </div>
+    </div>
+
+    <div class="page-actions">
+      <button
+        matIconButton
+        type="button"
+        (click)="reload()"
+        matTooltip="Refresh the figures"
+        aria-label="Refresh the figures"
+      >
+        <mat-icon>refresh</mat-icon>
+      </button>
+      @if (canCreate()) {
+        <a matButton="filled" routerLink="/tickets/new">
+          <mat-icon>add</mat-icon>
+          Raise a ticket
+        </a>
+      }
+    </div>
+  </header>
+
+  <!-- Indeterminate, and in a reserved 4px strip, for the reason the ticket list reserves one: a
+       refresh must not make the whole screen jump or flash a skeleton over figures that are still
+       perfectly readable. The previous numbers stay until the new ones land. -->
+  <div class="load-line" aria-hidden="true">
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+  </div>
+
+  @if (failure()) {
+    <div class="surface">
+      <div class="state-block" role="alert">
+        <mat-icon>cloud_off</mat-icon>
+        <p>These figures could not be loaded.</p>
+        <p class="state-hint">The tickets themselves may still be reachable.</p>
+        <div class="state-actions">
+          <button matButton="filled" type="button" (click)="reload()">Try again</button>
+          <a matButton routerLink="/tickets">Go to tickets</a>
+        </div>
+      </div>
+    </div>
+  } @else {
+    <!-- ------------------------------------------------------------------ the figures -->
+
+    <div class="kpi stagger">
+      <!-- The one hero figure on the screen. Open work is what a help desk is read for, so it is the
+           number that gets the gradient and the size; everything else is a supporting tile. -->
+      <article class="tile tile-hero">
+        <div class="tile-hero-text">
+          <p class="tile-label">Open tickets</p>
+          <p class="tile-hero-value">{{ openCount() | number }}</p>
+          <p class="tile-foot">{{ openNote() }}</p>
+        </div>
+        <span class="tile-hero-mark" aria-hidden="true">
+          <mat-icon>pending_actions</mat-icon>
+        </span>
+      </article>
+
+      @for (tile of tiles(); track tile.key) {
+        <article class="tile" [class.tile-alert]="tile.alert">
+          <span class="tile-icon" aria-hidden="true">
+            <mat-icon>{{ tile.icon }}</mat-icon>
+          </span>
+          <p class="tile-label">{{ tile.label }}</p>
+          <p class="tile-value">{{ tile.value | number }}</p>
+          <p class="tile-foot">{{ tile.hint }}</p>
+        </article>
+      }
+    </div>
+
+    <!-- ------------------------------------------------------------------ the breakdowns -->
+
+    <div class="panels">
+      <section class="surface">
+        <div class="surface-head">
+          <h2>Tickets by status</h2>
+          <span class="surface-note">{{ totalCount() | number }} in total</span>
+        </div>
+        <div class="surface-pad">
+          @if (hasAnyTicket()) {
+            <!-- A labelled list rather than a plot: eight classes is past the point where colour can
+                 tell them apart, so the pill carries identity and the bar carries only length. Every
+                 value is printed at the end of its row, so the tooltip adds the percentage and
+                 nothing a reader needs is only reachable by hovering. -->
+            <ul class="bars stagger">
+              @for (bar of statusBars(); track bar.key) {
+                <li class="bar-row" [matTooltip]="bar.tooltip" matTooltipShowDelay="400">
+                  <span class="bar-label">
+                    <span class="pill" [class]="'status-' + tone(bar.key)">{{ bar.label }}</span>
+                  </span>
+                  <span class="bar-track">
+                    <span
+                      class="bar-fill"
+                      [class.bar-muted]="bar.muted"
+                      [style.width.%]="bar.percent"
+                    ></span>
+                  </span>
+                  <span class="bar-value">{{ bar.count | number }}</span>
+                </li>
+              }
+            </ul>
+            <p class="page-note">
+              <mat-icon>info</mat-icon>
+              <span>
+                Bars are scaled against the longest one, so the shape of the queue stays readable.
+                Resolved and closed work is drawn in grey — it is counted here, but it is not
+                outstanding.
+              </span>
+            </p>
+          } @else {
+            <div class="state-block">
+              <mat-icon>inbox</mat-icon>
+              <p>There are no tickets to summarise yet.</p>
+              @if (canCreate()) {
+                <a matButton="filled" routerLink="/tickets/new">Raise the first one</a>
+              }
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="surface">
+        <div class="surface-head">
+          <h2>Open work by priority</h2>
+          <span class="surface-note">{{ openCount() | number }} open</span>
+        </div>
+        <div class="surface-pad">
+          @if (openCount() > 0) {
+            <ul class="bars stagger">
+              @for (bar of priorityBars(); track bar.key) {
+                <li class="bar-row" [matTooltip]="bar.tooltip" matTooltipShowDelay="400">
+                  <span class="bar-label">
+                    <span class="pill" [class]="'priority-' + tone(bar.key)">{{ bar.label }}</span>
+                  </span>
+                  <span class="bar-track">
+                    <span class="bar-fill" [style.width.%]="bar.percent"></span>
+                  </span>
+                  <span class="bar-value">{{ bar.count | number }}</span>
+                </li>
+              }
+            </ul>
+            <p class="page-note">
+              <mat-icon>info</mat-icon>
+              <span>
+                Resolved and closed tickets are excluded here. Priority describes how urgent
+                outstanding work is, and finished work would only inflate it.
+              </span>
+            </p>
+          } @else {
+            <div class="state-block">
+              <mat-icon>task_alt</mat-icon>
+              <p>Nothing is outstanding.</p>
+              <p class="state-hint">Every ticket you can see is resolved or closed.</p>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+
+    <!-- ------------------------------------------------------------------ latest activity -->
+
+    <section class="surface recent">
+      <div class="surface-head">
+        <h2>Latest tickets</h2>
+        <a class="surface-link" routerLink="/tickets">
+          View all
+          <mat-icon>arrow_forward</mat-icon>
+        </a>
+      </div>
+
+      @if (recentFailed()) {
+        <div class="state-block" role="alert">
+          <mat-icon>cloud_off</mat-icon>
+          <p>The latest tickets could not be loaded.</p>
+          <button matButton="filled" type="button" (click)="reload()">Try again</button>
+        </div>
+      } @else if (recent().length === 0) {
+        <div class="state-block">
+          <mat-icon>inbox</mat-icon>
+          <p>Nothing has been raised yet.</p>
+        </div>
+      } @else {
+        <ul class="recent-list stagger">
+          @for (ticket of recent(); track ticket.id) {
+            <li>
+              <a class="recent-row" [routerLink]="['/tickets', ticket.id]">
+                <span class="recent-ref">{{ ticket.ticketNumber }}</span>
+
+                <span class="recent-main">
+                  <span class="recent-title">{{ ticket.title }}</span>
+                  <small>
+                    {{ ticket.applicationName }} · {{ ticket.moduleName }}
+                    @if (ticket.raisedBy) {
+                      · raised by {{ ticket.raisedBy }}
+                    }
+                  </small>
+                </span>
+
+                <span class="recent-pills">
+                  <span class="pill" [class]="'status-' + tone(ticket.status)">
+                    {{ humanise(ticket.status) }}
+                  </span>
+                  <span class="pill" [class]="'priority-' + tone(ticket.priority)">
+                    {{ humanise(ticket.priority) }}
+                  </span>
+                </span>
+
+                <!-- An instant from the API; the pipe renders it in the reader's own zone, which is
+                     the entire reason those columns are TIMESTAMPTZ. -->
+                <span class="recent-when" [matTooltip]="ticket.createdAt | date: 'long'">
+                  {{ ticket.createdAt | date: 'd MMM, HH:mm' }}
+                </span>
+              </a>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+</section>

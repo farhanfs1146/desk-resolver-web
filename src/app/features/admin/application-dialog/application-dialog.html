@@ -1,0 +1,56 @@
+<h2 mat-dialog-title>{{ editing() ? 'Edit application' : 'Add application' }}</h2>
+
+<div class="app-progress" aria-hidden="true">
+  @if (saving()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+</div>
+
+<mat-dialog-content>
+  <p class="app-hint">
+    One row is an application and one of its modules. Add a second row for a second module — neither
+    name has to be unique on its own.
+  </p>
+
+  <form class="app-form" [formGroup]="form" (ngSubmit)="submit()">
+    <mat-form-field appearance="outline">
+      <mat-label>Application name</mat-label>
+      <input matInput formControlName="appName" [maxlength]="appNameMax" required />
+      @if (serverError('appName'); as message) {
+        <mat-error>{{ message }}</mat-error>
+      } @else if (form.controls.appName.touched && form.controls.appName.hasError('required')) {
+        <mat-error>An application name is required.</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Module name</mat-label>
+      <input matInput formControlName="moduleName" [maxlength]="moduleNameMax" required />
+      @if (serverError('moduleName'); as message) {
+        <mat-error>{{ message }}</mat-error>
+      } @else if (
+        form.controls.moduleName.touched && form.controls.moduleName.hasError('required')
+      ) {
+        <mat-error>A module name is required.</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-checkbox class="app-check" formControlName="active">
+      Active — tickets can be raised against it
+    </mat-checkbox>
+
+    <p class="app-error" role="alert" aria-live="assertive">
+      @if (errorMessage()) {
+        <mat-icon aria-hidden="true">error</mat-icon>
+        <span>{{ errorMessage() }}</span>
+      }
+    </p>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button matButton type="button" mat-dialog-close [disabled]="saving()">Cancel</button>
+  <button matButton="filled" type="button" [disabled]="saving()" (click)="submit()">
+    {{ saving() ? 'Saving...' : editing() ? 'Save changes' : 'Add application' }}
+  </button>
+</mat-dialog-actions>

@@ -1,0 +1,326 @@
+// The chrome every screen inside the shell repeats: the width-limited column, the title block, the
+// raised surface a table or a form sits on, and the centred block an empty or failed panel shows.
+//
+// Global, unlike `_status-pills.scss` next to it, and the difference is what each one is. Pills are
+// two components' semantic colours. These are the application's layout vocabulary - six screens use
+// them, and `.surface` is also what a child component's own panel sits inside. As a mixin it was
+// duplicated into every screen's stylesheet, which pushed four of them past the per-component CSS
+// budget for no benefit: there is one design system here, so there should be one copy of it.
+//
+// Each screen still tunes its own column width by setting `--page-max` in its scoped stylesheet;
+// custom properties resolve on the element, so the global rule below reads the local value.
+
+// -------------------------------------------------------------------------------------------------
+// Entrances
+//
+// One keyframe, used by `.page` below and by `.stagger` further down, so everything that arrives on
+// screen arrives the same way: a short rise of `--app-rise` and a fade.
+//
+// `translate` rather than `transform`, and opacity alongside it, because both are compositor
+// properties - they animate without laying the page out again. Animating `margin-top` or `height`
+// to the same visual effect would reflow on every frame, which is the difference between an
+// entrance and a stutter.
+//
+// `both` as the fill mode is what stops the flash: without it the element renders at full opacity
+// for the frame before the animation takes hold, so a staggered list flickers into place and then
+// fades in from nothing.
+// -------------------------------------------------------------------------------------------------
+
+@keyframes app-rise-in {
+  from {
+    opacity: 0;
+    translate: 0 var(--app-rise);
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+// The content column. `--page-max` so a screen can widen or narrow it without restating the rest
+// - the ticket list wants the full width for its columns, a form does not.
+//
+// Every screen inside the shell is a `.page`, so the animation here is what gives navigation a
+// sense of arrival - and it is declared once rather than per screen, which is the only reason all
+// six of them agree about it. The rail and the header deliberately do not move: they are the frame,
+// and a frame that re-enters on every navigation reads as a full page load.
+.page {
+  max-width: var(--page-max, 82rem);
+  margin: 0 auto;
+  padding: 1.75rem 1.5rem 3rem;
+  animation: app-rise-in var(--app-dur-base) var(--app-ease) both;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Stagger
+//
+// Put it on a container and its children enter in sequence. For a row of statistic tiles or a list
+// of bars this is the difference between a screen that appears and a screen that assembles.
+//
+// **35ms, and ten children.** The step has to be small enough that the whole group is in place
+// inside a third of a second - a stagger long enough to notice as waiting is a stagger that has
+// stopped being decoration. Ten is where the delays are capped because the eleventh child would
+// enter at 350ms on its own, after the group has visibly settled, and read as something that failed
+// to load rather than as part of the sequence. Anything past the tenth enters with no delay.
+//
+// `nth-child` rather than an index passed from the template: the delay is presentation, and a
+// component should not have to publish its own row numbers into the DOM to get it.
+// -------------------------------------------------------------------------------------------------
+
+.stagger > * {
+  animation: app-rise-in var(--app-dur-base) var(--app-ease) both;
+}
+
+@for $i from 1 through 10 {
+  .stagger > *:nth-child(#{$i}) {
+    animation-delay: #{($i - 1) * 35}ms;
+  }
+}
+
+@media (max-width: 599px) {
+  .page {
+    padding: 1.25rem 1rem 2.5rem;
+  }
+}
+
+// Title on the left, the screen's primary action on the right, wrapping to two rows on a narrow
+// viewport rather than letting the button shrink.
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.page-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  min-width: 0;
+}
+
+// The tinted square behind a screen's icon. Decorative, so every instance is `aria-hidden`; it
+// exists to give the title block a fixed left edge that survives the title wrapping.
+.page-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--app-radius-md);
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent);
+  color: var(--mat-sys-primary);
+  // Scales in slightly behind the page's own rise, so the title block settles and then the mark
+  // lands. It is the only decorative element in the header, which is what makes it the only one
+  // worth a second beat; giving the title the same treatment would read as a splash screen.
+  animation: app-mark-in var(--app-dur-base) var(--app-ease) 60ms both;
+
+  .mat-icon {
+    font-size: 1.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+.page-title {
+  font: var(--mat-sys-headline-small);
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+.page-lede {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0.125rem 0 0;
+  max-width: 52rem;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+// The raised card everything on a screen sits on: a table, a form, a panel. One border, one
+// radius, one shadow, so no screen invents its own.
+.surface {
+  background-color: var(--mat-sys-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-sm);
+  overflow: hidden;
+}
+
+.surface-pad {
+  padding: 1.25rem;
+}
+
+.surface-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--app-border);
+  background-color: var(--mat-sys-surface-container-lowest);
+
+  h2,
+  h3 {
+    font: var(--mat-sys-title-small);
+    font-weight: 650;
+    margin: 0;
+  }
+}
+
+// A filter bar above a table. Not inside `.surface`: the filters act on the surface rather than
+// being part of it, and keeping them on the canvas is what says so.
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+
+  .mat-mdc-form-field {
+    width: auto;
+    min-width: 11.5rem;
+  }
+}
+
+// Reserves the progress bar's height whether or not one is showing, so a table does not shift
+// down every time a filter changes.
+.load-line {
+  height: 4px;
+}
+
+// Empty, failed, or not-permitted. The same block for all three, because they are the same thing
+// to a reader: the panel has nothing to show and says why.
+.state-block {
+  display: grid;
+  place-items: center;
+  gap: 0.625rem;
+  padding: 3.5rem 1.5rem;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+
+  .mat-icon {
+    font-size: 2.25rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    opacity: 0.75;
+  }
+
+  p {
+    margin: 0;
+    font: var(--mat-sys-body-medium);
+    max-width: 28rem;
+  }
+
+  .state-hint {
+    font: var(--mat-sys-body-small);
+    opacity: 0.85;
+  }
+}
+
+// A note under a surface explaining a constraint that comes from the API rather than the screen -
+// why there is no Edit, why a list is shorter than expected.
+.page-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 1rem 0 0;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+
+  .mat-icon {
+    flex: 0 0 auto;
+    font-size: 1.125rem;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-top: 0.1rem;
+  }
+}
+
+// Key/value rows, used by the ticket detail's aside and the account screen.
+.kv {
+  display: grid;
+  grid-template-columns: minmax(0, 8.5rem) minmax(0, 1fr);
+  gap: 0.5rem 1rem;
+  margin: 0;
+
+  dt {
+    font: var(--mat-sys-label-medium);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  dd {
+    margin: 0;
+    font: var(--mat-sys-body-medium);
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+// The initials avatar
+//
+// Never an image: the API reports a display name and no avatar URL, so there is nothing to load and
+// a placeholder photograph would be an invention. The gradient is the same one the brand mark uses,
+// so a person's circle and the product's mark read as one identity rather than two unrelated shapes.
+//
+// Here rather than in the shell because the account screen shows the same avatar at a third size.
+// -------------------------------------------------------------------------------------------------
+
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--app-gradient);
+  color: #ffffff;
+  font: var(--mat-sys-label-medium);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.avatar-sm {
+  width: 1.75rem;
+  height: 1.75rem;
+  font: var(--mat-sys-label-small);
+  font-weight: 650;
+}
+
+.avatar-lg {
+  width: 2.5rem;
+  height: 2.5rem;
+  font: var(--mat-sys-title-small);
+  font-weight: 650;
+}
+
+.avatar-xl {
+  width: 3rem;
+  height: 3rem;
+  font: var(--mat-sys-title-medium);
+  font-weight: 650;
+}
+
+// The page icon's own entrance. Scale rather than a rise, so it reads as the mark settling into the
+// space the title block already left for it rather than as a second element arriving.
+@keyframes app-mark-in {
+  from {
+    opacity: 0;
+    scale: 0.82;
+  }
+
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}

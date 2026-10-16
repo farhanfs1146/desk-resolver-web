@@ -1,0 +1,29 @@
+# Line endings are normalised to LF in the repository and checked out as LF everywhere, Windows
+# included. `text=auto` alone would not do that: with `core.autocrlf=true` set globally - which is the
+# default on Windows installs - every checkout would rewrite these files to CRLF, and the result is
+# whole-file diffs that depend on whose machine committed rather than on what changed.
+#
+# `eol=lf` is the right side of that choice for this repository specifically: Prettier, the Angular
+# CLI and every Node tool here emit LF, and there is no Windows batch script in the tree that needs
+# CRLF to run. (The backend repository marks `*.cmd` as `eol=crlf` for exactly that reason; nothing
+# here is in that position.)
+* text=auto eol=lf
+
+# Binary, so Git neither diffs them nor touches their bytes looking for line endings.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.avif binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.otf binary
+*.pdf binary
+
+# Generated and enormous. Still committed - it is what makes an install reproducible - but excluded
+# from diffs and from language statistics so it stops drowning every review it appears in.
+package-lock.json -diff linguist-generated

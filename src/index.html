@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>DeskResolver</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="DeskResolver - raise, triage and resolve help-desk tickets."
+    />
+
+    <!-- Colours a mobile browser's own chrome so it continues the application's frame rather than
+         framing it in white. The dark value is the dark theme's canvas rather than its rail: this
+         paints the address bar, which sits above the content, not beside the navigation. -->
+    <meta name="theme-color" content="#15172b" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1120" media="(prefers-color-scheme: dark)" />
+
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Inter, variable. The theme asks for 400/500/550/650, and a variable face serves 550 and 650
+         exactly where a static one would round them to 500 and 700. -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Material Symbols Rounded, not the legacy Material Icons font. The rounded face matches the
+         radii used throughout, and its variable axes are what let a selected navigation item render
+         the *same* glyph filled instead of needing a second `_outline` icon name.
+
+         `display=block` rather than `swap`: an icon font has no sensible fallback, and swapping
+         would flash the ligature's literal text - "confirmation_number" - before the glyph loads.
+
+         The axis order in the URL is not cosmetic. Google's API requires the tuple sorted
+         lowercase-first then uppercase and answers 400 for any other order. -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-25..200&display=block"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <app-root></app-root>
+  </body>
+</html>

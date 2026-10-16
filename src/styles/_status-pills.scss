@@ -1,0 +1,78 @@
+// Status and priority colours, shared by the ticket list and the ticket detail.
+//
+// Deliberately not Material's primary/accent roles: these carry meaning rather than branding, and
+// have to stay distinguishable from one another at a glance down a column. Each pairs a tinted
+// background with its own on-colour mixed towards the surface's text colour, so contrast holds in
+// both the light and the dark theme without a second set of declarations.
+//
+// A partial rather than global CSS: component styles are scoped, and these belong to the two
+// components that render tickets, not to the whole application.
+
+@mixin pills {
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.15rem 0.6rem;
+    border-radius: 1rem;
+    font: var(--mat-sys-label-small);
+    white-space: nowrap;
+
+    mat-icon {
+      font-size: 1rem;
+      width: 1rem;
+      height: 1rem;
+    }
+  }
+
+  .status-open,
+  .status-reopened {
+    background-color: color-mix(in srgb, #1565c0 18%, transparent);
+    color: color-mix(in srgb, #1565c0 92%, var(--mat-sys-on-surface));
+  }
+
+  .status-under_review,
+  .status-pending {
+    background-color: color-mix(in srgb, #8e24aa 18%, transparent);
+    color: color-mix(in srgb, #8e24aa 92%, var(--mat-sys-on-surface));
+  }
+
+  .status-assigned,
+  .status-in_progress {
+    background-color: color-mix(in srgb, #ef6c00 20%, transparent);
+    color: color-mix(in srgb, #ef6c00 92%, var(--mat-sys-on-surface));
+  }
+
+  .status-resolved,
+  .status-closed {
+    background-color: color-mix(in srgb, #2e7d32 18%, transparent);
+    color: color-mix(in srgb, #2e7d32 92%, var(--mat-sys-on-surface));
+  }
+
+  .priority-low {
+    background-color: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .priority-medium {
+    background-color: color-mix(in srgb, #1565c0 16%, transparent);
+    color: color-mix(in srgb, #1565c0 92%, var(--mat-sys-on-surface));
+  }
+
+  .priority-high {
+    background-color: color-mix(in srgb, #ef6c00 20%, transparent);
+    color: color-mix(in srgb, #ef6c00 92%, var(--mat-sys-on-surface));
+  }
+
+  .priority-critical {
+    background-color: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
+    font-weight: 600;
+  }
+
+  .pill-overdue {
+    background-color: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
+    font-weight: 600;
+  }
+}

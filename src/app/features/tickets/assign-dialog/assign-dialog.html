@@ -1,0 +1,56 @@
+<h2 mat-dialog-title>Assign ticket</h2>
+
+<mat-dialog-content class="assign-body">
+  <p class="assign-hint">
+    @if (data.currentAssigneeName) {
+      {{ data.ticketNumber }} is assigned to <strong>{{ data.currentAssigneeName }}</strong
+      >.
+    } @else {
+      {{ data.ticketNumber }} is unassigned.
+    }
+  </p>
+
+  <div class="assign-progress" aria-hidden="true">
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+  </div>
+
+  @if (failure()) {
+    <p role="alert">The list of people could not be loaded.</p>
+  } @else {
+    <mat-form-field appearance="outline" class="assign-field">
+      <mat-label>Search</mat-label>
+      <input matInput [value]="filter()" (input)="filter.set($any($event.target).value)" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="assign-field">
+      <mat-label>Assign to</mat-label>
+      <mat-select [value]="chosen()" (valueChange)="chosen.set($event)" required>
+        @for (user of options(); track user.id) {
+          <mat-option [value]="user.id">
+            <span class="assign-option">
+              {{ user.fullName }}
+              <small>{{ user.email }}</small>
+            </span>
+          </mat-option>
+        } @empty {
+          <mat-option [disabled]="true">
+            @if (loading()) {
+              Loading...
+            } @else {
+              Nobody matches
+            }
+          </mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button matButton type="button" mat-dialog-close>Cancel</button>
+  <button matButton="filled" type="button" [disabled]="chosen() === null" (click)="submit()">
+    Assign
+  </button>
+</mat-dialog-actions>

@@ -1,0 +1,87 @@
+<section class="files">
+  <header class="files-head">
+    <h2>Attachments</h2>
+    @if (canRead() && page().totalCount > 0) {
+      <span class="files-count">{{ page().totalCount }}</span>
+    }
+
+    @if (canUpload()) {
+      <span class="files-spacer"></span>
+      <!-- A hidden input driven by a real button: the native file control cannot be styled, and a
+           label-wrapped input loses the disabled state while an upload is in flight. -->
+      <input
+        #picker
+        type="file"
+        class="files-input"
+        [accept]="accept"
+        (change)="pick(picker)"
+        aria-hidden="true"
+        tabindex="-1"
+      />
+      <button matButton type="button" [disabled]="uploading()" (click)="picker.click()">
+        <mat-icon>upload_file</mat-icon>
+        {{ uploading() ? 'Uploading...' : 'Attach a file' }}
+      </button>
+    }
+  </header>
+
+  @if (!canRead()) {
+    <p class="files-denied">Your account cannot read ticket attachments.</p>
+  } @else {
+    <div class="files-progress" aria-hidden="true">
+      @if (loading() || uploading()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+    </div>
+
+    <p class="files-error" role="alert" aria-live="assertive">
+      @if (uploadError()) {
+        <mat-icon aria-hidden="true">error</mat-icon>
+        <span>{{ uploadError() }}</span>
+      }
+    </p>
+
+    @if (failure()) {
+      <div class="files-empty" role="alert">
+        <p>These attachments could not be loaded.</p>
+        <button matButton type="button" (click)="reload()">Try again</button>
+      </div>
+    } @else {
+      <ul class="files-list stagger">
+        @for (file of page().items; track file.id) {
+          <li class="file">
+            <mat-icon class="file-icon" aria-hidden="true">{{ icon(file.fileType) }}</mat-icon>
+
+            <span class="file-main">
+              <button
+                class="file-name"
+                type="button"
+                [disabled]="isDownloading(file.id)"
+                (click)="download(file)"
+                [matTooltip]="'Download ' + (file.fileName ?? '')"
+              >
+                {{ file.fileName }}
+              </button>
+              <small>
+                {{ size(file.sizeBytes) }} · {{ file.uploadedBy }} ·
+                <time [attr.datetime]="file.uploadedAt">
+                  {{ file.uploadedAt | date: 'd MMM y, HH:mm' }}
+                </time>
+              </small>
+            </span>
+
+            @if (isDownloading(file.id)) {
+              <mat-icon class="file-busy" aria-label="Downloading">hourglass_top</mat-icon>
+            } @else {
+              <mat-icon class="file-action" aria-hidden="true">download</mat-icon>
+            }
+          </li>
+        } @empty {
+          @if (!loading()) {
+            <li class="files-empty"><p>No files attached.</p></li>
+          }
+        }
+      </ul>
+    }
+  }
+</section>

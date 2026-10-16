@@ -1,0 +1,195 @@
+<section class="page">
+  <nav class="create-back">
+    <a matButton routerLink="/tickets">
+      <mat-icon>arrow_back</mat-icon>
+      All tickets
+    </a>
+  </nav>
+
+  <header class="page-head">
+    <div class="page-heading">
+      <span class="page-icon" aria-hidden="true">
+        <mat-icon>add_circle</mat-icon>
+      </span>
+      <div>
+        <h1 class="page-title">Raise a ticket</h1>
+        <p class="page-lede">
+          Describe what is wrong and which application it is in. Support staff triage from this.
+        </p>
+      </div>
+    </div>
+  </header>
+
+  <div class="surface">
+    <div class="load-line" aria-hidden="true">
+      @if (submitting() || loadingCatalogue()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+    </div>
+
+    @if (!canChooseApplication()) {
+      <div class="state-block" role="alert">
+        <mat-icon>lock</mat-icon>
+        <p>
+          Your account cannot read the application catalogue, so there is nothing to raise a ticket
+          against. Ask an administrator to grant you the role that includes it.
+        </p>
+        <a matButton="filled" routerLink="/tickets">Back to tickets</a>
+      </div>
+    } @else if (catalogueFailed()) {
+      <div class="state-block" role="alert">
+        <mat-icon>cloud_off</mat-icon>
+        <p>The list of applications could not be loaded.</p>
+        <button matButton="filled" type="button" (click)="reloadCatalogue()">Try again</button>
+      </div>
+    } @else {
+      <form class="create-form" [formGroup]="form" (ngSubmit)="submit()">
+        <mat-form-field appearance="outline">
+          <mat-label>Application and module</mat-label>
+          <mat-select formControlName="applicationId" required>
+            @for (option of options(); track option.id) {
+              <!-- One row is an application *and* a module: both names are needed to tell
+                 "HRMS / Attendance" from "HRMS / Payroll", and neither is unique alone. -->
+              <mat-option [value]="option.id">
+                {{ option.appName }} — {{ option.moduleName }}
+              </mat-option>
+            } @empty {
+              <mat-option [disabled]="true">
+                @if (loadingCatalogue()) {
+                  Loading...
+                } @else {
+                  No active applications
+                }
+              </mat-option>
+            }
+          </mat-select>
+          @if (serverError('applicationId'); as message) {
+            <mat-error>{{ message }}</mat-error>
+          } @else if (
+            form.controls.applicationId.touched && form.controls.applicationId.hasError('required')
+          ) {
+            <mat-error>Choose the application this is about.</mat-error>
+          }
+          @if (chosenModule(); as module) {
+            <mat-hint>Module: {{ module }}</mat-hint>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Title</mat-label>
+          <input matInput formControlName="title" [maxlength]="titleMax" required />
+          <mat-hint align="end">{{ form.controls.title.value.length }} / {{ titleMax }}</mat-hint>
+          @if (serverError('title'); as message) {
+            <mat-error>{{ message }}</mat-error>
+          } @else if (form.controls.title.touched && form.controls.title.hasError('required')) {
+            <mat-error>Give it a short, descriptive title.</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Description</mat-label>
+          <textarea
+            matInput
+            formControlName="description"
+            rows="6"
+            placeholder="What happens, what you expected, and how to reproduce it."
+            required
+          ></textarea>
+          @if (serverError('description'); as message) {
+            <mat-error>{{ message }}</mat-error>
+          } @else if (
+            form.controls.description.touched && form.controls.description.hasError('required')
+          ) {
+            <mat-error>Describe the problem.</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="create-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Issue type</mat-label>
+            <mat-select formControlName="issueType" required>
+              @for (option of issueTypes; track option) {
+                <mat-option [value]="option">{{ humanise(option) }}</mat-option>
+              }
+            </mat-select>
+            @if (serverError('issueType'); as message) {
+              <mat-error>{{ message }}</mat-error>
+            } @else if (
+              form.controls.issueType.touched && form.controls.issueType.hasError('required')
+            ) {
+              <mat-error>Choose an issue type.</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Priority</mat-label>
+            <mat-select formControlName="priority" required>
+              @for (option of priorities; track option) {
+                <mat-option [value]="option">{{ humanise(option) }}</mat-option>
+              }
+            </mat-select>
+            @if (serverError('priority'); as message) {
+              <mat-error>{{ message }}</mat-error>
+            } @else if (
+              form.controls.priority.touched && form.controls.priority.hasError('required')
+            ) {
+              <mat-error>Choose a priority.</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <div class="create-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Business impact (optional)</mat-label>
+            <input
+              matInput
+              formControlName="businessImpact"
+              [maxlength]="businessImpactMax"
+              placeholder="e.g. Department-level"
+            />
+            <mat-hint align="end">
+              {{ form.controls.businessImpact.value.length }} / {{ businessImpactMax }}
+            </mat-hint>
+            @if (serverError('businessImpact'); as message) {
+              <mat-error>{{ message }}</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Needed by (optional)</mat-label>
+            <!-- datetime-local, so the browser renders and collects it in the reader's own zone. The
+               value carries no offset; submit() converts it to the instant that zone implies, which
+               is the only zone anyone can correctly assume - and why the API refuses to guess one. -->
+            <input
+              matInput
+              type="datetime-local"
+              formControlName="expectedBy"
+              (change)="onExpectedByChange(form.controls.expectedBy.value)"
+            />
+            @if (serverError('expectedBy'); as message) {
+              <mat-error>{{ message }}</mat-error>
+            } @else if (expectedByInPast()) {
+              <mat-hint class="create-warn">That is in the past.</mat-hint>
+            } @else {
+              <mat-hint>Interpreted in your own time zone.</mat-hint>
+            }
+          </mat-form-field>
+        </div>
+
+        <p class="create-error" role="alert" aria-live="assertive">
+          @if (errorMessage()) {
+            <mat-icon aria-hidden="true">error</mat-icon>
+            <span>{{ errorMessage() }}</span>
+          }
+        </p>
+
+        <div class="create-actions">
+          <button matButton="filled" type="submit" [disabled]="submitting()">
+            {{ submitting() ? 'Raising...' : 'Raise ticket' }}
+          </button>
+          <a matButton routerLink="/tickets">Cancel</a>
+        </div>
+      </form>
+    }
+  </div>
+</section>

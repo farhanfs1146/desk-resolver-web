@@ -1,0 +1,116 @@
+.comments {
+  padding: 1.25rem;
+}
+
+.comments-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  h2 {
+    font: var(--mat-sys-title-medium);
+    margin: 0;
+  }
+}
+
+.comments-count {
+  padding: 0.1rem 0.5rem;
+  border-radius: 1rem;
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-label-small);
+}
+
+.comments-denied {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// Reserve the bar so posting a comment does not shunt the thread down four pixels.
+.comments-progress {
+  height: 4px;
+  margin: 0.5rem 0;
+}
+
+.comments-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.comment {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.comment-avatar {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background-color: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+  font: var(--mat-sys-label-small);
+}
+
+.comment-body {
+  min-width: 0;
+}
+
+.comment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0 0 0.15rem;
+  font: var(--mat-sys-body-small);
+
+  time {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.comment-text {
+  margin: 0;
+  font: var(--mat-sys-body-medium);
+  // Comments are plain text from a textarea: keep the author's line breaks, and break long
+  // unspaced strings (pasted URLs, stack traces) instead of letting them widen the column.
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comments-empty {
+  padding: 1.5rem 0;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  list-style: none;
+
+  p {
+    margin: 0 0 0.5rem;
+    font: var(--mat-sys-body-medium);
+  }
+}
+
+.comments-form {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+
+  button {
+    align-self: flex-start;
+  }
+}
+
+.comments-error {
+  min-height: 1.25rem;
+  margin: 0 0 0.5rem;
+  color: var(--mat-sys-error);
+  font: var(--mat-sys-body-small);
+}

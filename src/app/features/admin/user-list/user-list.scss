@@ -1,0 +1,55 @@
+.page {
+  --page-max: 76rem;
+}
+
+.users-code {
+  font-variant-numeric: tabular-nums;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// Marks the reader's own row. Worth doing: the one account somebody must not lock themselves out of
+// is their own, and the roles dialog is destructive by replacement.
+.users-you {
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 1rem;
+  background-color: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  font: var(--mat-sys-label-small);
+  font-weight: 600;
+}
+
+.users-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.3rem 0;
+}
+
+.chip {
+  padding: 0.1rem 0.55rem;
+  border-radius: 1rem;
+  background-color: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  font: var(--mat-sys-label-small);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.users-none {
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+}
+
+.users-yes {
+  color: var(--app-success);
+}
+
+.users-no {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.users-actions {
+  text-align: right;
+  white-space: nowrap;
+}

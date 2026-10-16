@@ -1,0 +1,93 @@
+.history {
+  padding: 1.25rem;
+}
+
+.history-head h2 {
+  font: var(--mat-sys-title-medium);
+  margin: 0;
+}
+
+.history-denied {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.history-progress {
+  height: 4px;
+  margin: 0.5rem 0;
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.entry {
+  display: flex;
+  gap: 0.75rem;
+  padding-bottom: 1rem;
+  position: relative;
+
+  // The connecting line of the timeline, drawn behind each icon and stopped on the last entry.
+  &:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 0.73rem;
+    top: 1.75rem;
+    bottom: 0;
+    width: 1px;
+    background-color: var(--mat-sys-outline-variant);
+  }
+}
+
+.entry-icon {
+  flex: 0 0 auto;
+  z-index: 1;
+  border-radius: 50%;
+  background-color: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 1.1rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: grid;
+  place-items: center;
+}
+
+.entry-body {
+  min-width: 0;
+}
+
+.entry-what {
+  margin: 0;
+  font: var(--mat-sys-body-medium);
+  overflow-wrap: anywhere;
+}
+
+.entry-meta {
+  margin: 0;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.entry-remarks {
+  margin: 0.35rem 0 0;
+  padding: 0.4rem 0.6rem;
+  border-left: 2px solid var(--mat-sys-outline-variant);
+  background-color: var(--mat-sys-surface-container-low);
+  font: var(--mat-sys-body-small);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.history-empty {
+  padding: 1.5rem 0;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  list-style: none;
+
+  p {
+    margin: 0 0 0.5rem;
+    font: var(--mat-sys-body-medium);
+  }
+}

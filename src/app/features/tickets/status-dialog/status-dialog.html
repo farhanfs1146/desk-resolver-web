@@ -1,0 +1,42 @@
+<h2 mat-dialog-title>Change status</h2>
+
+<mat-dialog-content>
+  <p class="status-hint">
+    {{ data.ticketNumber }} is currently
+    <strong>{{ data.current ? humanise(data.current) : 'unknown' }}</strong
+    >.
+  </p>
+
+  <form class="status-form" [formGroup]="form" (ngSubmit)="submit()">
+    <mat-form-field appearance="outline">
+      <mat-label>New status</mat-label>
+      <mat-select formControlName="status" required>
+        @for (option of options; track option) {
+          <mat-option [value]="option">{{ humanise(option) }}</mat-option>
+        }
+      </mat-select>
+      @if (form.controls.status.touched && form.controls.status.hasError('required')) {
+        <mat-error>Choose a status.</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Remarks (optional)</mat-label>
+      <textarea
+        matInput
+        formControlName="remarks"
+        rows="3"
+        placeholder="Why is it moving?"
+      ></textarea>
+      <mat-hint>Recorded in the ticket's history.</mat-hint>
+      @if (form.controls.remarks.hasError('maxlength')) {
+        <mat-error>That is longer than 1000 characters.</mat-error>
+      }
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button matButton type="button" mat-dialog-close>Cancel</button>
+  <button matButton="filled" type="button" (click)="submit()">Change status</button>
+</mat-dialog-actions>

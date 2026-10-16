@@ -1,0 +1,78 @@
+<h2 mat-dialog-title>Roles for {{ data.fullName }}</h2>
+
+<div class="roles-progress" aria-hidden="true">
+  @if (saving() || loadingRoles()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+</div>
+
+<mat-dialog-content class="roles-body">
+  <p class="roles-note">
+    This replaces the roles outright rather than adding to them — whatever is selected when you save
+    is the complete set.
+  </p>
+
+  <mat-form-field appearance="outline" class="roles-field">
+    <mat-label>Roles</mat-label>
+    <mat-select multiple [value]="chosen()" (valueChange)="chosen.set($event)" required>
+      @for (role of roleOptions(); track role.code) {
+        <mat-option [value]="role.code">{{ role.name }} ({{ role.code }})</mat-option>
+      } @empty {
+        <mat-option [disabled]="true">
+          @if (loadingRoles()) {
+            Loading...
+          } @else {
+            No roles available
+          }
+        </mat-option>
+      }
+    </mat-select>
+    @if (rolesFailed()) {
+      <mat-hint>The role list could not be loaded.</mat-hint>
+    } @else if (chosen().length === 0) {
+      <mat-hint>At least one role is required.</mat-hint>
+    }
+  </mat-form-field>
+
+  @if (losingOwnAdmin()) {
+    <p class="roles-warning" role="alert">
+      <mat-icon aria-hidden="true">warning</mat-icon>
+      <span>
+        This is your own account, and the roles you have selected do not include user management. If
+        no other active account can manage users, the server will refuse the change — and if one
+        can, you will no longer be able to undo this yourself.
+      </span>
+    </p>
+  }
+
+  @if (resultingPermissions().length > 0) {
+    <p class="roles-note">
+      These roles add up to {{ resultingPermissions().length }} permissions. Holding several roles
+      only ever widens access — permissions are a union, never a narrowing.
+    </p>
+    <ul class="roles-permissions">
+      @for (permission of resultingPermissions(); track permission) {
+        <li>{{ permission }}</li>
+      }
+    </ul>
+  }
+
+  <p class="roles-error" role="alert" aria-live="assertive">
+    @if (errorMessage()) {
+      <mat-icon aria-hidden="true">error</mat-icon>
+      <span>{{ errorMessage() }}</span>
+    }
+  </p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button matButton type="button" mat-dialog-close [disabled]="saving()">Cancel</button>
+  <button
+    matButton="filled"
+    type="button"
+    [disabled]="saving() || unchanged() || chosen().length === 0"
+    (click)="submit()"
+  >
+    {{ saving() ? 'Saving...' : 'Save roles' }}
+  </button>
+</mat-dialog-actions>

@@ -1,0 +1,136 @@
+<section class="page">
+  <header class="page-head">
+    <div class="page-heading">
+      <span class="page-icon" aria-hidden="true">
+        <mat-icon>widgets</mat-icon>
+      </span>
+      <div>
+        <h1 class="page-title">Applications</h1>
+        <p class="page-lede">
+          What tickets can be raised against. Each row is one application and one of its modules.
+        </p>
+      </div>
+    </div>
+
+    @if (canManage()) {
+      <div class="page-actions">
+        <button matButton="filled" type="button" (click)="add()">
+          <mat-icon>add</mat-icon>
+          Add application
+        </button>
+      </div>
+    }
+  </header>
+
+  <div class="surface">
+    <div class="load-line" aria-hidden="true">
+      @if (loading()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+    </div>
+
+    @if (failure()) {
+      <div class="state-block" role="alert">
+        <mat-icon>cloud_off</mat-icon>
+        <p>This catalogue could not be loaded.</p>
+        <button matButton="filled" type="button" (click)="reload()">Try again</button>
+      </div>
+    } @else {
+      <table
+        mat-table
+        [dataSource]="page().items"
+        matSort
+        [matSortActive]="sort().active"
+        [matSortDirection]="sort().direction"
+        (matSortChange)="onSortChange($event)"
+        class="apps-table"
+      >
+        <ng-container matColumnDef="appName">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Application</th>
+          <td mat-cell *matCellDef="let app" [class.apps-dim]="!app.active">{{ app.appName }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="moduleName">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Module</th>
+          <td mat-cell *matCellDef="let app" [class.apps-dim]="!app.active">
+            {{ app.moduleName }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="active">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+          <td mat-cell *matCellDef="let app">
+            @if (app.active) {
+              <span class="apps-pill apps-on">Active</span>
+            } @else {
+              <span class="apps-pill apps-off" matTooltip="No new tickets can be raised against it">
+                Inactive
+              </span>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let app" class="apps-actions">
+            <button
+              matButton
+              type="button"
+              (click)="edit(app)"
+              [attr.aria-label]="'Edit ' + app.appName"
+            >
+              Edit
+            </button>
+            <!-- Only on active rows: deactivating an inactive application is a no-op, and the way
+                 back is the Edit dialog's own Active checkbox. -->
+            @if (app.active) {
+              <button
+                matButton
+                type="button"
+                class="apps-danger"
+                (click)="deactivate(app)"
+                [attr.aria-label]="'Deactivate ' + app.appName"
+              >
+                Deactivate
+              </button>
+            }
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns()"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns()"></tr>
+      </table>
+
+      @if (page().items.length === 0 && !loading()) {
+        <div class="state-block">
+          <mat-icon>widgets</mat-icon>
+          <p>No applications yet.</p>
+          @if (canManage()) {
+            <p class="state-hint">
+              Nobody can raise a ticket until there is at least one active application.
+            </p>
+          }
+        </div>
+      }
+    }
+
+    <mat-paginator
+      [length]="page().totalCount"
+      [pageIndex]="page().pageNumber"
+      [pageSize]="page().pageSize"
+      [pageSizeOptions]="[10, 25, 50, 100]"
+      (page)="onPageChange($event)"
+      showFirstLastButtons
+    />
+  </div>
+
+  @if (canManage()) {
+    <p class="page-note">
+      <mat-icon aria-hidden="true">info</mat-icon>
+      <span>
+        Deactivating keeps the row, so tickets already raised against it still name it. Neither an
+        application nor a module can be deleted outright.
+      </span>
+    </p>
+  }
+</section>

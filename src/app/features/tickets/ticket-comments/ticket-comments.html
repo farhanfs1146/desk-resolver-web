@@ -1,0 +1,93 @@
+<section class="comments">
+  <header class="comments-head">
+    <h2>Discussion</h2>
+    @if (canRead() && page().totalCount > 0) {
+      <span class="comments-count">{{ page().totalCount }}</span>
+    }
+  </header>
+
+  @if (!canRead()) {
+    <p class="comments-denied">
+      Your account cannot read ticket discussions. Ask an administrator for a role that includes it.
+    </p>
+  } @else {
+    <div class="comments-progress" aria-hidden="true">
+      @if (loading()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+    </div>
+
+    @if (failure()) {
+      <div class="comments-empty" role="alert">
+        <p>This discussion could not be loaded.</p>
+        <button matButton type="button" (click)="reload()">Try again</button>
+      </div>
+    } @else {
+      <ol class="comments-list stagger">
+        @for (comment of page().items; track comment.id) {
+          <li class="comment">
+            <span class="comment-avatar" aria-hidden="true">{{
+              initials(comment.commentedBy)
+            }}</span>
+            <div class="comment-body">
+              <p class="comment-meta">
+                <strong>{{ comment.commentedBy }}</strong>
+                <!-- An instant; rendered in the reader's own zone, like every other timestamp here. -->
+                <time [attr.datetime]="comment.createdAt">
+                  {{ comment.createdAt | date: 'd MMM y, HH:mm' }}
+                </time>
+              </p>
+              <p class="comment-text">{{ comment.comment }}</p>
+            </div>
+          </li>
+        } @empty {
+          @if (!loading()) {
+            <li class="comments-empty">
+              <p>No comments yet.</p>
+            </li>
+          }
+        }
+      </ol>
+
+      @if (page().totalCount > page().pageSize) {
+        <mat-paginator
+          [length]="page().totalCount"
+          [pageIndex]="page().pageNumber"
+          [pageSize]="page().pageSize"
+          [pageSizeOptions]="[25, 50, 100]"
+          (page)="onPageChange($event)"
+        />
+      }
+    }
+
+    @if (canWrite()) {
+      <form class="comments-form" [formGroup]="form" (ngSubmit)="post()">
+        <mat-form-field appearance="outline">
+          <mat-label>Add a comment</mat-label>
+          <textarea
+            matInput
+            formControlName="comment"
+            rows="3"
+            [attr.aria-describedby]="postError() ? 'comment-error' : null"
+          ></textarea>
+          @if (form.controls.comment.touched && form.controls.comment.hasError('required')) {
+            <mat-error>Write something before posting.</mat-error>
+          } @else if (form.controls.comment.hasError('maxlength')) {
+            <mat-error>That is longer than 4000 characters.</mat-error>
+          }
+        </mat-form-field>
+
+        <p class="comments-error" id="comment-error" role="alert" aria-live="assertive">
+          @if (postError()) {
+            {{ postError() }}
+          }
+        </p>
+
+        <button matButton="filled" type="submit" [disabled]="posting()">
+          <mat-icon>send</mat-icon>
+          {{ posting() ? 'Posting...' : 'Post comment' }}
+        </button>
+      </form>
+    }
+  }
+</section>

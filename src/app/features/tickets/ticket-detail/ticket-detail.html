@@ -1,0 +1,155 @@
+<article class="page">
+  <nav class="detail-back">
+    <a matButton routerLink="/tickets">
+      <mat-icon>arrow_back</mat-icon>
+      All tickets
+    </a>
+  </nav>
+
+  <div class="load-line" aria-hidden="true">
+    @if (loading() || working()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+  </div>
+
+  @if (failure(); as problem) {
+    <div class="surface state-block" role="alert">
+      <mat-icon>{{ problem.icon }}</mat-icon>
+      <p>{{ problem.text }}</p>
+      <div class="detail-state-actions">
+        <button matButton type="button" (click)="reload()">Try again</button>
+        <a matButton="filled" routerLink="/tickets">Back to tickets</a>
+      </div>
+    </div>
+  } @else if (ticket(); as ticket) {
+    <header class="surface detail-head">
+      <p class="detail-number">{{ ticket.ticketNumber }}</p>
+      <h1>{{ ticket.title }}</h1>
+
+      <div class="detail-badges">
+        <span class="pill" [class]="'status-' + tone(ticket.status)">
+          {{ humanise(ticket.status) }}
+        </span>
+        <span class="pill" [class]="'priority-' + tone(ticket.priority)">
+          {{ humanise(ticket.priority) }} priority
+        </span>
+        @if (overdue()) {
+          <span class="pill pill-overdue" matTooltip="Expected before now and not resolved">
+            <mat-icon aria-hidden="true">schedule</mat-icon>
+            Overdue
+          </span>
+        }
+      </div>
+
+      @if (canChangeStatus() || canAssign()) {
+        <div class="detail-actions">
+          @if (canChangeStatus()) {
+            <button
+              matButton="outlined"
+              type="button"
+              [disabled]="working()"
+              (click)="changeStatus()"
+            >
+              <mat-icon>swap_horiz</mat-icon>
+              Change status
+            </button>
+          }
+          @if (canAssign()) {
+            <button matButton="filled" type="button" [disabled]="working()" (click)="assign()">
+              <mat-icon>person_add</mat-icon>
+              {{ ticket.assignedTo ? 'Reassign' : 'Assign' }}
+            </button>
+          }
+        </div>
+      }
+    </header>
+
+    <div class="detail-grid">
+      <div class="detail-main">
+        <section class="surface surface-pad">
+          <h2>Description</h2>
+          <p class="detail-text">{{ ticket.description }}</p>
+
+          @if (ticket.businessImpact) {
+            <h2>Business impact</h2>
+            <p class="detail-text">{{ ticket.businessImpact }}</p>
+          }
+        </section>
+
+        <section class="surface">
+          <app-ticket-comments [ticketId]="ticketId()!" />
+        </section>
+
+        <section class="surface">
+          <app-ticket-attachments [ticketId]="ticketId()!" />
+        </section>
+      </div>
+
+      <aside class="detail-side">
+        <section class="surface surface-pad">
+          <h2>Details</h2>
+          <dl class="kv facts">
+            <dt>Application</dt>
+            <dd>
+              {{ ticket.applicationName }}
+              <small>{{ ticket.moduleName }}</small>
+            </dd>
+
+            <dt>Issue type</dt>
+            <dd>{{ humanise(ticket.issueType) }}</dd>
+
+            <dt>Raised by</dt>
+            <dd>{{ ticket.raisedBy }}</dd>
+
+            <dt>Assigned to</dt>
+            <dd>
+              @if (ticket.assignedTo) {
+                {{ ticket.assignedTo }}
+              } @else {
+                <span class="unset">Unassigned</span>
+              }
+            </dd>
+
+            <dt>Raised</dt>
+            <dd>
+              <time [attr.datetime]="ticket.createdAt">
+                {{ ticket.createdAt | date: 'd MMM y, HH:mm' }}
+              </time>
+            </dd>
+
+            <dt>Expected by</dt>
+            <dd [class.overdue]="overdue()">
+              @if (ticket.expectedBy) {
+                <time [attr.datetime]="ticket.expectedBy">
+                  {{ ticket.expectedBy | date: 'd MMM y, HH:mm' }}
+                </time>
+              } @else {
+                <span class="unset">Not set</span>
+              }
+            </dd>
+
+            <dt>Last updated</dt>
+            <dd>
+              <time [attr.datetime]="ticket.updatedAt">
+                {{ ticket.updatedAt | date: 'd MMM y, HH:mm' }}
+              </time>
+            </dd>
+
+            @if (ticket.resolvedAt) {
+              <dt>Resolved</dt>
+              <dd>
+                <time [attr.datetime]="ticket.resolvedAt">
+                  {{ ticket.resolvedAt | date: 'd MMM y, HH:mm' }}
+                </time>
+              </dd>
+            }
+          </dl>
+        </section>
+
+        <section class="surface">
+          <app-ticket-history [ticketId]="ticketId()!" />
+        </section>
+      </aside>
+    </div>
+  }
+</article>

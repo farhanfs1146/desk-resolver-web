@@ -1,0 +1,550 @@
+// The application's one global stylesheet: the Material theme, the design tokens the shell and the
+// screens share, the page chrome every screen is built from, and the component overrides that make
+// Material look like this product rather than like the default demo.
+//
+// Everything else is component-scoped. What lives here is only what cannot be - the theme itself,
+// the layout vocabulary six screens share, and overrides of Material's own internals, which sit
+// outside any component's emulated encapsulation.
+
+@use '@angular/material' as mat;
+@use './styles/theme-colors' as palette;
+
+// `.page`, `.surface`, `.state-block` and the rest of the screen layout. Its own file because it is
+// a separate concern from the theme, and global for the reason set out at the top of it.
+@use './styles/page';
+
+html {
+  height: 100%;
+
+  @include mat.theme(
+    (
+      color: (
+        primary: palette.$primary-palette,
+        tertiary: palette.$tertiary-palette,
+      ),
+      typography: (
+        plain-family: (
+          Inter,
+          'Segoe UI',
+          Roboto,
+          system-ui,
+          sans-serif,
+        ),
+        brand-family: (
+          Inter,
+          'Segoe UI',
+          Roboto,
+          system-ui,
+          sans-serif,
+        ),
+      ),
+      density: -1,
+    )
+  );
+
+  // `mat.theme()` emits every colour as `light-dark(...)`, so the entire theme follows this one
+  // property and the toggle in the header has nothing to do but change it. Set on `html` rather
+  // than `body` because Material renders overlays - menus, dialogs, tooltips - into a container
+  // outside the body's own subtree, which would otherwise keep the light palette.
+  color-scheme: light;
+
+  // -----------------------------------------------------------------------------------------------
+  // Tokens this application adds on top of Material's.
+  //
+  // `--mat-sys-*` covers the roles Material components need; these cover the chrome around them,
+  // which Material has no opinion about. Prefixed `--app-` so it is never ambiguous which system a
+  // value came from, and declared with `light-dark()` for the same reason the theme is.
+  // -----------------------------------------------------------------------------------------------
+
+  // The navigation rail stays dark in both themes, deliberately. It is the one surface that should
+  // read as the product's own frame rather than as part of the page, and a dark rail against a
+  // light canvas is what makes the content area look lifted rather than merely bordered.
+  --app-rail-bg: light-dark(#15172b, #0b0d19);
+  --app-rail-raised: light-dark(#1d2040, #141830);
+  --app-rail-fg: light-dark(#eceaff, #dedcf5);
+  --app-rail-muted: light-dark(#9a9ac4, #8b8bb0);
+  --app-rail-hover: light-dark(rgb(255 255 255 / 7%), rgb(255 255 255 / 6%));
+  --app-rail-active-bg: light-dark(rgb(129 124 255 / 22%), rgb(129 124 255 / 16%));
+  --app-rail-active-fg: #ffffff;
+  --app-rail-border: light-dark(rgb(255 255 255 / 8%), rgb(255 255 255 / 6%));
+
+  --app-canvas: light-dark(#f4f4fb, #0f1120);
+  --app-header-bg: light-dark(rgb(255 255 255 / 82%), rgb(20 22 36 / 82%));
+  --app-border: var(--mat-sys-outline-variant);
+  --app-border-strong: light-dark(rgb(26 29 46 / 14%), rgb(255 255 255 / 12%));
+
+  // Three steps, used consistently: `sm` for anything resting on the canvas, `md` for anything
+  // overlapping it, `lg` for overlays. Built from a shared colour rather than written out per
+  // theme, because `light-dark()` takes exactly two arguments and a multi-layer shadow is itself
+  // comma-separated - the colour is the only part that has to change between themes anyway.
+  --app-shadow-color: light-dark(rgb(20 23 43 / 9%), rgb(0 0 0 / 45%));
+  --app-shadow-sm: 0 1px 2px var(--app-shadow-color);
+  --app-shadow-md: 0 2px 4px var(--app-shadow-color), 0 8px 20px var(--app-shadow-color);
+  --app-shadow-lg: 0 4px 10px var(--app-shadow-color), 0 16px 40px var(--app-shadow-color);
+
+  --app-radius-sm: 8px;
+  --app-radius-md: 14px;
+  --app-radius-lg: 20px;
+
+  // -----------------------------------------------------------------------------------------------
+  // Motion
+  //
+  // Three durations and two curves, and every animated property in the application picks from them.
+  // Before this each stylesheet wrote its own `120ms ease` or `180ms ease`, which is how a set of
+  // screens ends up feeling subtly unlike one another - the numbers were consistent by coincidence
+  // and there was nothing to keep them that way.
+  //
+  // The scale is by DISTANCE, not by importance. A colour changing under the cursor has nowhere to
+  // travel, so `fast` is as long as it should ever take; something that moves across the screen
+  // needs `slow` or it arrives before the eye has followed it.
+  //
+  //   fast  - feedback under the pointer: hover tints, focus, press
+  //   base  - a state change in place: entrances, a panel opening, an indicator moving
+  //   slow  - something covering a real distance: a drawer, a bar growing from zero
+  //
+  // `ease` decelerates into its end state and is for anything arriving; `ease-inout` is symmetric
+  // and is for anything that reverses, where an entrance curve played backwards looks wrong.
+  --app-dur-fast: 120ms;
+  --app-dur-base: 200ms;
+  --app-dur-slow: 320ms;
+  --app-ease: cubic-bezier(0.2, 0, 0, 1);
+  --app-ease-inout: cubic-bezier(0.4, 0, 0.2, 1);
+
+  // A fourth duration, and it is not part of the scale above - which is why it has its own name
+  // rather than being `--app-dur-slower`.
+  //
+  // The three above time the INTERFACE responding: a tint, a panel, a drawer. Every one of them is
+  // something the user set off, and they are kept short because anything the user is waiting on
+  // should be over quickly.
+  //
+  // This one times DATA being revealed - a chart drawing itself out of its baseline. Nobody is
+  // waiting on it: the numbers are already legible beside it, and the motion exists to show how the
+  // figures relate rather than to acknowledge an action. At `slow` it was over before it read as
+  // drawing at all, which is the whole point of it. It is deliberately the longest thing in the
+  // application, and deliberately the only thing allowed to be.
+  --app-dur-draw: 1200ms;
+
+  // How far an entering element rises. One value, so a tile, a page and a dialog all enter by the
+  // same amount and the screen reads as one thing arriving rather than several.
+  --app-rise: 8px;
+
+  // One definition, used by the sign-in hero, the brand mark and the primary statistic tile, so
+  // those three never drift apart.
+  --app-gradient: linear-gradient(135deg, #4d44e3 0%, #6d3bd7 55%, #8758f2 100%);
+
+  // Semantic colours Material's roles do not cover. Error it has; success and warning it does not,
+  // and a help desk needs all three - "resolved" and "overdue" are not branding.
+  --app-success: light-dark(#15803d, #4ade80);
+  --app-success-container: light-dark(#dcfce7, rgb(74 222 128 / 16%));
+  --app-warning: light-dark(#b45309, #fbbf24);
+  --app-warning-container: light-dark(#fef3c7, rgb(251 191 36 / 16%));
+}
+
+html[data-theme='light'] {
+  color-scheme: light;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+// "Follow the system" is a third state, not the absence of the other two: it has to re-expose both
+// palettes so the browser picks, which `light dark` does and the unset attribute cannot.
+html[data-theme='system'] {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  background-color: var(--app-canvas);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// Material Symbols is a variable font. Without an explicit axis setting every icon renders at the
+// default weight and optical size, which is visibly heavier than the type around it.
+.mat-icon {
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
+// A filled glyph where the outline reads as too timid - a selected nav item, a status marker.
+.icon-filled {
+  font-variation-settings:
+    'FILL' 1,
+    'wght' 500,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Reduced motion
+//
+// One switch for the whole application, which is the only way this stays true. Guarding each
+// animation where it is declared means every future one is opt-in, and the one somebody forgets is
+// invisible to everybody who does not need it - so it ships.
+//
+// `1ms` rather than `none`, deliberately. Several Material components finish their work in a
+// `transitionend` or `animationend` handler; removing the transition outright means the event never
+// fires and the component is left mid-state - a menu that never closes, a ripple that never clears.
+// A duration too short to perceive honours the preference and still produces the event.
+//
+// `!important` because this has to beat the declaration it is overriding whatever its specificity,
+// including the ones Material sets as component tokens.
+// -------------------------------------------------------------------------------------------------
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+// Focus
+//
+// Material's own focus indicators are inconsistent between components and several are invisible
+// against the dark rail. One ring, defined once, for anything the keyboard can reach.
+// -------------------------------------------------------------------------------------------------
+
+:focus-visible {
+  outline: 2px solid var(--mat-sys-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.app-rail :focus-visible {
+  outline-color: #a4a1ff;
+}
+
+::selection {
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 25%, transparent);
+}
+
+// -------------------------------------------------------------------------------------------------
+// Scrollbars
+//
+// Only the WebKit/Blink form is given. Firefox's `scrollbar-color` cannot express a thumb that
+// appears on hover, and a permanently visible one is worse than that browser's own default.
+// -------------------------------------------------------------------------------------------------
+
+@supports selector(::-webkit-scrollbar) {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--mat-sys-on-surface) 18%, transparent);
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in srgb, var(--mat-sys-on-surface) 32%, transparent);
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+// Material overrides
+//
+// Each of these exists because the selector reaches inside a Material component, which no component
+// stylesheet can do. Shape and weight only - nothing here changes behaviour.
+// -------------------------------------------------------------------------------------------------
+
+// Material's default header row is the same weight as a cell, which leaves a dense table with no
+// visible structure. A tinted, uppercase header and a row hover give the row being read a position.
+.mat-mdc-table {
+  background: transparent;
+
+  .mat-mdc-header-row {
+    height: 44px;
+    background-color: var(--mat-sys-surface-container-low);
+  }
+
+  .mat-mdc-header-cell {
+    font: var(--mat-sys-label-small);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--mat-sys-on-surface-variant);
+    border-bottom-color: var(--app-border-strong);
+  }
+
+  .mat-mdc-row {
+    transition: background-color var(--app-dur-fast) var(--app-ease-inout);
+
+    &:hover {
+      background-color: color-mix(in srgb, var(--mat-sys-primary) 5%, transparent);
+    }
+
+    &:last-of-type .mat-mdc-cell {
+      border-bottom: none;
+    }
+  }
+
+  .mat-mdc-cell {
+    border-bottom-color: var(--app-border);
+  }
+}
+
+.mat-mdc-paginator {
+  background: transparent;
+  border-top: 1px solid var(--app-border);
+}
+
+// Menus and dialogs are the surfaces that look most like stock Material. Rounding them to this
+// application's scale and giving them the overlay shadow is most of what makes the chrome read as
+// one piece. `!important` because Material sets both as component-level tokens of its own.
+.mat-mdc-menu-panel {
+  border-radius: var(--app-radius-md) !important;
+  box-shadow: var(--app-shadow-lg) !important;
+  border: 1px solid var(--app-border);
+}
+
+.mat-mdc-dialog-surface {
+  border-radius: var(--app-radius-lg) !important;
+  box-shadow: var(--app-shadow-lg) !important;
+}
+
+.mat-mdc-card {
+  border-radius: var(--app-radius-md) !important;
+}
+
+.mat-mdc-tooltip .mdc-tooltip__surface {
+  font: var(--mat-sys-label-medium);
+  border-radius: var(--app-radius-sm);
+}
+
+// Text and filled buttons sit at Material's pill radius by default, which fights the 8/14/20 scale
+// everything else uses. Icon buttons keep their circle.
+.mat-mdc-button-base:not(.mat-mdc-icon-button) {
+  border-radius: var(--app-radius-sm);
+  font-weight: 550;
+  letter-spacing: 0.01em;
+}
+
+.mat-mdc-form-field {
+  width: 100%;
+}
+
+.mat-mdc-snack-bar-container .mdc-snackbar__surface {
+  border-radius: var(--app-radius-sm) !important;
+}
+
+// -------------------------------------------------------------------------------------------------
+// The header's menus
+//
+// Global rather than in `shell.scss` because Material renders a `mat-menu` into its own overlay
+// container, which is a sibling of the application root and therefore outside every component's
+// emulated encapsulation. The classes are reached through `mat-menu`'s own `class` input, so they
+// land on the panel the overlay creates rather than on the trigger.
+// -------------------------------------------------------------------------------------------------
+
+.menu-panel {
+  min-width: 15rem;
+
+  .mat-mdc-menu-content {
+    padding: 0.375rem;
+  }
+
+  .mat-mdc-menu-item {
+    border-radius: var(--app-radius-sm);
+    min-height: 2.5rem;
+  }
+
+  // Material's menu-item icon inherits the item's colour, which makes a destructive action look
+  // like every other row until it is read.
+  .menu-danger {
+    --mat-menu-item-label-text-color: var(--mat-sys-error);
+    --mat-menu-item-icon-color: var(--mat-sys-error);
+  }
+}
+
+// The identity block at the top of the account menu. Not a `mat-menu-item`: it is not an action, and
+// a disabled item would still take a tab stop and read as something that failed to work.
+.menu-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem 0.875rem;
+
+  .menu-identity-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+    min-width: 0;
+
+    strong {
+      font: var(--mat-sys-body-medium);
+      font-weight: 650;
+    }
+
+    small {
+      font: var(--mat-sys-label-small);
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+}
+
+.menu-alerts {
+  max-width: min(24rem, 92vw);
+
+  .mat-mdc-menu-content {
+    max-height: 26rem;
+    overflow-y: auto;
+  }
+}
+
+.menu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.5rem 0.625rem 0.75rem;
+  font: var(--mat-sys-title-small);
+  font-weight: 650;
+}
+
+.menu-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+// Smaller than a normal text button: it sits in a panel header beside a title, not in a form.
+.menu-head-button {
+  --mat-button-text-label-text-size: 0.75rem;
+
+  min-width: 0;
+  height: 1.75rem;
+  padding-inline: 0.5rem;
+  font-weight: 600;
+}
+
+.menu-foot {
+  padding: 0.625rem 0.75rem 0.25rem;
+  margin-top: 0.25rem;
+  border-top: 1px solid var(--app-border);
+  font: var(--mat-sys-label-small);
+  color: var(--mat-sys-on-surface-variant);
+  line-height: 1.4;
+}
+
+.menu-empty {
+  display: grid;
+  place-items: center;
+  gap: 0.5rem;
+  padding: 1.75rem 1rem;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+
+  .mat-icon {
+    font-size: 1.75rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    opacity: 0.7;
+  }
+
+  p {
+    margin: 0;
+    font: var(--mat-sys-body-small);
+  }
+}
+
+// An alert is two lines, which a `mat-menu-item` is not built for - it centres a single line and
+// truncates it. Overriding the height and letting the text block wrap is all it needs.
+.alert-row {
+  height: auto !important;
+  padding-block: 0.5rem !important;
+  align-items: flex-start !important;
+
+  .mat-icon {
+    margin-top: 0.125rem;
+  }
+
+  .alert-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.35;
+    min-width: 0;
+    white-space: normal;
+
+    strong {
+      font: var(--mat-sys-body-small);
+      font-weight: 600;
+    }
+
+    small {
+      font: var(--mat-sys-label-small);
+      color: var(--mat-sys-on-surface-variant);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+  }
+}
+
+.alert-when {
+  font: var(--mat-sys-label-small);
+  color: var(--mat-sys-on-surface-variant);
+  opacity: 0.8;
+  font-variant-numeric: tabular-nums;
+  margin-top: 0.125rem;
+}
+
+// Unread rows are the ones worth reading, so they are the ones that look read-worthy: a tinted
+// background, a heavier title and a dot. Read rows are not greyed out - they are still legible
+// history, and dimming them would make an inbox somebody has caught up with look broken.
+.alert-unread {
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 6%, transparent);
+
+  .alert-text strong {
+    font-weight: 700;
+  }
+}
+
+.alert-dot {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-left: 0.5rem;
+  border-radius: 50%;
+  background-color: var(--mat-sys-primary);
+}
+
+.alert-error {
+  color: var(--mat-sys-error) !important;
+}
+
+.alert-warning {
+  color: var(--app-warning) !important;
+}
+
+.alert-success {
+  color: var(--app-success) !important;
+}
+
+.alert-info {
+  color: var(--mat-sys-primary) !important;
+}

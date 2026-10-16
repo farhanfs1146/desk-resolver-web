@@ -1,0 +1,409 @@
+@use '../../../styles/status-pills' as pills;
+
+// The same status and priority colours the ticket list and ticket detail use. Shared rather than
+// restated: the pill beside a bar on this screen and the pill in that table are the same statement
+// about the same ticket, and two copies of the palette would eventually disagree about it.
+@include pills.pills;
+
+.page {
+  // Wider than the default. The breakdowns sit two across above a full-width activity list, and at
+  // the 82rem default the two panels are too narrow for a status pill and a bar on one line.
+  --page-max: 92rem;
+}
+
+// -------------------------------------------------------------------------------------------------
+// The figure row
+//
+// Auto-fit rather than a fixed column count, because the number of tiles changes with the caller's
+// permissions - "Unassigned" is absent for somebody who only sees their own tickets - and a layout
+// that assumed four would leave a hole. The hero spans two tracks so it stays the largest thing on
+// the screen at every width.
+// -------------------------------------------------------------------------------------------------
+
+.kpi {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.875rem;
+  margin-bottom: 1.5rem;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 1.125rem 1.25rem;
+  background-color: var(--mat-sys-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.tile-icon {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  margin-bottom: 0.375rem;
+  border-radius: var(--app-radius-sm);
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
+  color: var(--mat-sys-primary);
+
+  .mat-icon {
+    font-size: 1.125rem;
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+
+.tile-label {
+  font: var(--mat-sys-label-medium);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+}
+
+// Proportional figures, deliberately. `tabular-nums` gives every digit the width of a zero, which
+// reads loose at this size - it belongs in the bar column below, where numbers stack vertically.
+.tile-value {
+  font: var(--mat-sys-headline-small);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.tile-foot {
+  font: var(--mat-sys-label-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0.25rem 0 0;
+  line-height: 1.35;
+}
+
+// A figure that means somebody has to act. The whole tile shifts rather than just the number, so it
+// is noticeable without hunting - and it is still labelled, so the colour is not carrying the
+// meaning on its own.
+.tile-alert {
+  border-color: color-mix(in srgb, var(--mat-sys-error) 35%, var(--app-border));
+  background-color: color-mix(in srgb, var(--mat-sys-error) 5%, var(--mat-sys-surface));
+
+  .tile-icon {
+    background-color: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
+  }
+
+  .tile-value {
+    color: var(--mat-sys-error);
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+// The hero figure
+//
+// Exactly one per screen. Open work is the question a help desk is opened to answer, so it is the
+// number that gets the gradient and the size; every other figure is a supporting tile.
+// -------------------------------------------------------------------------------------------------
+
+.tile-hero {
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  grid-column: span 2;
+  border: none;
+  background: var(--app-gradient);
+  color: #ffffff;
+  box-shadow: var(--app-shadow-md);
+
+  .tile-label,
+  .tile-foot {
+    color: rgb(255 255 255 / 82%);
+  }
+
+  .tile-hero-text {
+    min-width: 0;
+  }
+}
+
+.tile-hero-value {
+  font-family: var(--mat-sys-plain-font-family);
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0.125rem 0 0;
+}
+
+.tile-hero-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--app-radius-md);
+  background-color: rgb(255 255 255 / 16%);
+
+  .mat-icon {
+    font-size: 1.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+@media (max-width: 599px) {
+  .tile-hero {
+    grid-column: span 1;
+  }
+
+  .tile-hero-value {
+    font-size: 2.5rem;
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+// The breakdown panels
+// -------------------------------------------------------------------------------------------------
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(23rem, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+  align-items: start;
+}
+
+.surface-note {
+  font: var(--mat-sys-label-small);
+  color: var(--mat-sys-on-surface-variant);
+  font-variant-numeric: tabular-nums;
+}
+
+.surface-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font: var(--mat-sys-label-medium);
+  font-weight: 600;
+  color: var(--mat-sys-primary);
+  text-decoration: none;
+
+  .mat-icon {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+    transition: translate var(--app-dur-fast) var(--app-ease);
+  }
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+
+    // Moves the way the link goes. Three pixels, because the arrow has to stay attached to its
+    // label - far enough and it reads as two elements rather than one affordance.
+    .mat-icon {
+      translate: 3px 0;
+    }
+  }
+}
+
+.bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.125rem;
+}
+
+// A grid rather than flex so the pill column, the track and the number line up across every row -
+// ragged bar starts would make the panel unreadable as a comparison, which is the only thing it is
+// for. `min-height` keeps the hover target comfortably past the 24px minimum.
+.bar-row {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr) 3rem;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.25rem;
+  padding: 0 0.125rem;
+  border-radius: var(--app-radius-sm);
+  transition: background-color var(--app-dur-fast) var(--app-ease-inout);
+
+  &:hover {
+    background-color: color-mix(in srgb, var(--mat-sys-on-surface) 4%, transparent);
+  }
+}
+
+.bar-label {
+  display: flex;
+  min-width: 0;
+}
+
+.bar-track {
+  position: relative;
+  display: block;
+  height: 10px;
+  border-radius: 5px;
+  background-color: var(--mat-sys-surface-container-high);
+  overflow: hidden;
+}
+
+// Square where it meets the baseline, rounded at the data end - so the end of the bar reads as a
+// value and the start reads as an origin. A thin mark, not a block.
+.bar-fill {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: 0 5px 5px 0;
+  background-color: var(--mat-sys-primary);
+  transform-origin: left center;
+
+  // Two separate jobs, which is why both an animation and a transition are declared - and why the
+  // two run at different speeds.
+  //
+  // The animation is the panel drawing itself the first time. It uses `--app-dur-draw`, which is far
+  // longer than anything else in the application, because nobody is waiting on it: the number is
+  // already printed at the end of every row, so the motion is there to let the shape of the queue
+  // build rather than to acknowledge a click. At the interface's own `slow` it was finished before
+  // it read as drawing. It scales rather than animating `width`, so the growth is a compositor
+  // transform and not a reflow per frame - and `width` is left free for the second job.
+  //
+  // The transition is every time after that, and it stays at `slow` deliberately. A refresh is
+  // something the user set off and is waiting on, so the bars should travel to their new lengths
+  // briskly; making them re-draw over most of a second would turn a data update into a delay.
+  // `scale` has already finished at 1 by then and stays out of the way.
+  animation: app-bar-grow var(--app-dur-draw) var(--app-ease) var(--app-dur-base) both;
+  transition: width var(--app-dur-slow) var(--app-ease);
+}
+
+@keyframes app-bar-grow {
+  from {
+    scale: 0 1;
+  }
+
+  to {
+    scale: 1 1;
+  }
+}
+
+// Finished work. Grey rather than a fifth colour: it is context for the open bars above it, and the
+// row's own pill already says which status it is.
+.bar-muted {
+  background-color: color-mix(in srgb, var(--mat-sys-on-surface) 30%, transparent);
+}
+
+// Tabular here and nowhere else on the screen: this is a column of numbers that has to align
+// vertically for the panel to be scannable.
+.bar-value {
+  font: var(--mat-sys-body-medium);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Latest tickets
+//
+// A list of links rather than a `mat-table`. The ticket list already renders the table version with
+// sorting, paging and filters; six rows of the same thing here would be a worse copy of a screen one
+// click away. What this wants is for a whole row to be a target.
+// -------------------------------------------------------------------------------------------------
+
+.recent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li + li {
+    border-top: 1px solid var(--app-border);
+  }
+}
+
+.recent-row {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  color: inherit;
+  text-decoration: none;
+  transition:
+    background-color var(--app-dur-fast) var(--app-ease-inout),
+    translate var(--app-dur-fast) var(--app-ease-inout);
+
+  &:hover {
+    background-color: color-mix(in srgb, var(--mat-sys-primary) 5%, transparent);
+    translate: 2px 0;
+  }
+}
+
+.recent-ref {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--mat-sys-primary);
+}
+
+.recent-main {
+  min-width: 0;
+
+  small {
+    display: block;
+    font: var(--mat-sys-label-small);
+    color: var(--mat-sys-on-surface-variant);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.recent-title {
+  display: block;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-pills {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.recent-when {
+  font: var(--mat-sys-label-small);
+  font-variant-numeric: tabular-nums;
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
+}
+
+// Below this the four columns cannot all fit, and shrinking them turns the title into three
+// characters and an ellipsis. Two rows, with the metadata wrapping under the title.
+@media (max-width: 899px) {
+  .recent-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.25rem 0.75rem;
+  }
+
+  .recent-ref {
+    grid-row: 1;
+  }
+
+  .recent-main {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .recent-pills {
+    grid-column: 2;
+    grid-row: 1;
+    justify-content: flex-end;
+  }
+
+  .recent-when {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+}
+
+// Two buttons in a failed-state block, which `.state-block` lays out as a single column.
+.state-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}

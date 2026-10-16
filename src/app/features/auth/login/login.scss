@@ -1,0 +1,264 @@
+// Two panels: the brand on the left, the form on the right.
+//
+// The split is 1fr / 1fr rather than a centred card because this is the only full-page screen in the
+// application, and the one chance to say what the product is before somebody is inside it. The hero
+// is the half that collapses below 900px - the form is what the screen is *for*, and a brand panel
+// stacked above it on a phone would push the password field below the fold.
+
+.login {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100dvh;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Hero
+// -------------------------------------------------------------------------------------------------
+
+.login-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 3rem;
+  overflow: hidden;
+  background: var(--app-gradient);
+  color: #ffffff;
+
+  // Two soft lights over the gradient, which is what keeps a large flat area of brand colour from
+  // looking like a swatch. Decorative and non-interactive, hence `pointer-events: none`.
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  // The two lights drift, very slowly and very slightly, which is the whole of the effect: a large
+  // flat brand panel with nothing moving on it reads as an image, and this is the one screen that
+  // has to look alive before anybody has signed in.
+  //
+  // `alternate` rather than looping, so each one eases back the way it came and there is no jump at
+  // the seam. The two durations are deliberately not multiples of one another - matched periods
+  // would have them meeting in the same place every cycle, which is the point at which a reader
+  // starts noticing a pattern instead of an atmosphere.
+  //
+  // Both are `pointer-events: none` already, and the application-wide reduced-motion switch in
+  // styles.scss stops them outright for anybody who has asked for that.
+  &::before {
+    width: 32rem;
+    height: 32rem;
+    top: -12rem;
+    right: -10rem;
+    background: radial-gradient(circle, rgb(255 255 255 / 18%) 0%, transparent 65%);
+    animation: app-glow-drift 22s var(--app-ease-inout) infinite alternate;
+  }
+
+  &::after {
+    width: 26rem;
+    height: 26rem;
+    bottom: -9rem;
+    left: -7rem;
+    background: radial-gradient(circle, rgb(12 14 30 / 28%) 0%, transparent 65%);
+    animation: app-glow-drift 29s var(--app-ease-inout) infinite alternate-reverse;
+  }
+}
+
+@keyframes app-glow-drift {
+  from {
+    translate: 0 0;
+  }
+
+  to {
+    translate: -2rem 1.5rem;
+  }
+}
+
+.hero-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  position: relative;
+}
+
+.hero-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 12px;
+  background-color: rgb(255 255 255 / 16%);
+  border: 1px solid rgb(255 255 255 / 22%);
+  color: #ffffff;
+
+  .mat-icon {
+    font-size: 1.375rem;
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+}
+
+.hero-wordmark {
+  font: var(--mat-sys-title-medium);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.hero-copy {
+  position: relative;
+  max-width: 26rem;
+
+  h2 {
+    font: var(--mat-sys-headline-large);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin: 0 0 0.875rem;
+  }
+
+  p {
+    font: var(--mat-sys-body-large);
+    line-height: 1.55;
+    margin: 0;
+    color: rgb(255 255 255 / 82%);
+  }
+}
+
+.hero-points {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font: var(--mat-sys-body-medium);
+    color: rgb(255 255 255 / 90%);
+  }
+
+  .mat-icon {
+    flex: 0 0 auto;
+    padding: 0.375rem;
+    box-sizing: content-box;
+    font-size: 1.125rem;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 8px;
+    background-color: rgb(255 255 255 / 14%);
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+// Form
+// -------------------------------------------------------------------------------------------------
+
+.login-panel {
+  display: grid;
+  place-items: center;
+  padding: 2.5rem 1.5rem;
+  background-color: var(--mat-sys-surface);
+}
+
+.login-form-wrap {
+  width: 100%;
+  max-width: 23rem;
+  // Enters just behind the hero's three items, so the eye is led across the panel and then lands on
+  // the thing it has to use. The delay is the stagger's own step times three.
+  animation: app-rise-in var(--app-dur-base) var(--app-ease) 105ms both;
+
+  h1 {
+    font: var(--mat-sys-headline-medium);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    margin: 0 0 0.375rem;
+  }
+}
+
+.login-lede {
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0 0 1.75rem;
+}
+
+// Only ever visible below 900px - see the note at the top of this file.
+.login-compact-brand {
+  display: none;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 1.75rem;
+  font: var(--mat-sys-title-medium);
+  font-weight: 650;
+
+  .hero-mark {
+    background: var(--app-gradient);
+    border-color: transparent;
+  }
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.login-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+  color: var(--mat-sys-error);
+  font: var(--mat-sys-body-small);
+  line-height: 1.4;
+
+  // Reserve the line whether or not there is a message, so the button does not jump when one
+  // appears. The empty paragraph still has to exist for aria-live to announce into it.
+  min-height: 1.5rem;
+
+  .mat-icon {
+    flex: 0 0 auto;
+    font-size: 1.125rem;
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+
+.login-submit {
+  height: 2.875rem;
+
+  // Material spaces a button's icon for a trailing glyph; a leading spinner needs the gap itself.
+  .mat-mdc-progress-spinner {
+    margin-right: 0.5rem;
+    --mdc-circular-progress-active-indicator-color: currentColor;
+  }
+}
+
+.login-foot {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 1.75rem 0 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--app-border);
+  line-height: 1.5;
+}
+
+@media (max-width: 899px) {
+  .login {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .login-hero {
+    display: none;
+  }
+
+  .login-compact-brand {
+    display: flex;
+  }
+}

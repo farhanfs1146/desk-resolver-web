@@ -1,0 +1,46 @@
+<section class="history">
+  <header class="history-head">
+    <h2>History</h2>
+  </header>
+
+  @if (!canRead()) {
+    <p class="history-denied">Your account cannot read this ticket's history.</p>
+  } @else {
+    <div class="history-progress" aria-hidden="true">
+      @if (loading()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+    </div>
+
+    @if (failure()) {
+      <div class="history-empty" role="alert">
+        <p>This history could not be loaded.</p>
+        <button matButton type="button" (click)="reload()">Try again</button>
+      </div>
+    } @else {
+      <ol class="history-list stagger">
+        @for (entry of entries(); track entry.id) {
+          <li class="entry">
+            <mat-icon class="entry-icon" aria-hidden="true">{{ icon(entry.actionType) }}</mat-icon>
+            <div class="entry-body">
+              <p class="entry-what">{{ describe(entry) }}</p>
+              <p class="entry-meta">
+                {{ entry.changedBy }} ·
+                <time [attr.datetime]="entry.changedAt">
+                  {{ entry.changedAt | date: 'd MMM y, HH:mm' }}
+                </time>
+              </p>
+              @if (entry.remarks) {
+                <p class="entry-remarks">{{ entry.remarks }}</p>
+              }
+            </div>
+          </li>
+        } @empty {
+          @if (!loading()) {
+            <li class="history-empty"><p>Nothing recorded yet.</p></li>
+          }
+        }
+      </ol>
+    }
+  }
+</section>

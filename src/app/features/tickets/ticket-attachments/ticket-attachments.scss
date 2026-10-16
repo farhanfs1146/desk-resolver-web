@@ -1,0 +1,139 @@
+.files {
+  padding: 1.25rem;
+}
+
+.files-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  h2 {
+    font: var(--mat-sys-title-medium);
+    margin: 0;
+  }
+}
+
+.files-count {
+  padding: 0.1rem 0.5rem;
+  border-radius: 1rem;
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-label-small);
+}
+
+.files-spacer {
+  flex: 1 1 auto;
+}
+
+// Visually gone but still focusable-by-script and still a real form control.
+.files-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.files-denied {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.files-progress {
+  height: 4px;
+  margin: 0.5rem 0;
+}
+
+.files-error {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 1.25rem;
+  margin: 0 0 0.5rem;
+  color: var(--mat-sys-error);
+  font: var(--mat-sys-body-small);
+
+  mat-icon {
+    font-size: 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}
+
+.files-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.file {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+
+  + .file {
+    border-top: 1px solid var(--mat-sys-outline-variant);
+  }
+}
+
+.file-icon {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.file-main {
+  min-width: 0;
+  flex: 1 1 auto;
+
+  small {
+    display: block;
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-body-small);
+  }
+}
+
+// A button that reads as a link. It has to be a button: downloading needs an Authorization header,
+// so the bytes come through HttpClient rather than from the browser following an href.
+.file-name {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--mat-sys-primary);
+  font: var(--mat-sys-body-medium);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    color: var(--mat-sys-on-surface-variant);
+    cursor: default;
+  }
+}
+
+.file-action,
+.file-busy {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.files-empty {
+  padding: 1.5rem 0;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  list-style: none;
+
+  p {
+    margin: 0 0 0.5rem;
+    font: var(--mat-sys-body-medium);
+  }
+}

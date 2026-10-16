@@ -1,0 +1,131 @@
+@use '../../../../styles/status-pills' as pills;
+
+// Shared with the ticket list - see styles/_status-pills.scss for why these are not Material's own
+// colour roles.
+@include pills.pills;
+
+.page {
+  --page-max: 84rem;
+}
+
+.detail-back {
+  margin-bottom: 0.75rem;
+}
+
+// The ticket's identity, lifted onto its own surface so the panels below read as its contents rather
+// than as siblings of it.
+.detail-head {
+  display: grid;
+  gap: 0.625rem;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail-number {
+  margin: 0;
+  font: var(--mat-sys-label-large);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--mat-sys-primary);
+}
+
+h1 {
+  margin: 0;
+  font: var(--mat-sys-headline-small);
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+
+.detail-badges,
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.detail-actions {
+  margin-top: 0.375rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--app-border);
+
+  // Undoes the header's own padding so the rule meets the surface's edges, which is what makes it
+  // read as the card's footer rather than as a line drawn through it.
+  margin-inline: -1.25rem;
+  padding-inline: 1.25rem;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+
+  // One column below the point where the side panel stops being a side panel, rather than at a
+  // device width: the breakpoint belongs to this layout, not to a guess about hardware.
+  @media (max-width: 64rem) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.detail-main,
+.detail-side {
+  display: grid;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+// Section headings inside a surface. The sibling rule spaces a second heading - Description followed
+// by Business impact - without needing a wrapper around each pair.
+h2 {
+  font: var(--mat-sys-title-small);
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  margin: 0 0 0.625rem;
+
+  + * + h2 {
+    margin-top: 1.5rem;
+  }
+}
+
+.detail-text {
+  margin: 0;
+  font: var(--mat-sys-body-medium);
+  line-height: 1.6;
+  color: var(--mat-sys-on-surface-variant);
+
+  // Descriptions come from a textarea: keep the author's line breaks, and break long unspaced
+  // strings - pasted URLs, stack traces - rather than letting them widen the column.
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+// `.kv` from the shared partial supplies the grid; these are the value treatments specific to a
+// ticket's facts.
+.facts {
+  grid-template-columns: auto minmax(0, 1fr);
+
+  dd small {
+    display: block;
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-body-small);
+  }
+
+  .unset {
+    color: var(--mat-sys-on-surface-variant);
+    font-style: italic;
+  }
+
+  .overdue {
+    color: var(--mat-sys-error);
+    font-weight: 650;
+  }
+}
+
+.detail-state-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}

@@ -1,0 +1,184 @@
+<section class="page">
+  <header class="page-head">
+    <div class="page-heading">
+      <span class="page-icon" aria-hidden="true">
+        <mat-icon>confirmation_number</mat-icon>
+      </span>
+      <div>
+        <h1 class="page-title">Tickets</h1>
+        <p class="page-lede">{{ scopeNote() }}</p>
+      </div>
+    </div>
+
+    @if (canCreate()) {
+      <div class="page-actions">
+        <a matButton="filled" routerLink="/tickets/new">
+          <mat-icon>add</mat-icon>
+          Raise a ticket
+        </a>
+      </div>
+    }
+  </header>
+
+  <form class="filter-bar" (submit)="$event.preventDefault()">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Show</mat-label>
+      <mat-select [(value)]="scope" (valueChange)="onFilterChange()">
+        <mat-option value="involved">{{ scopeLabel() }}</mat-option>
+        <mat-option value="raised">Raised by me</mat-option>
+        <mat-option value="assigned">Assigned to me</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Status</mat-label>
+      <mat-select [(value)]="status" (valueChange)="onFilterChange()">
+        <mat-option [value]="null">Any status</mat-option>
+        @for (option of statuses; track option) {
+          <mat-option [value]="option">{{ humanise(option) }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Priority</mat-label>
+      <mat-select [(value)]="priority" (valueChange)="onFilterChange()">
+        <mat-option [value]="null">Any priority</mat-option>
+        @for (option of priorities; track option) {
+          <mat-option [value]="option">{{ humanise(option) }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    @if (filtersApplied()) {
+      <button matButton type="button" (click)="clearFilters()">
+        <mat-icon>filter_alt_off</mat-icon>
+        Clear
+      </button>
+    }
+  </form>
+
+  <div class="surface">
+    <!-- Indeterminate rather than a spinner over the table: the previous page stays readable while
+         the next one loads, which matters when somebody is paging through a triage queue. -->
+    <div class="load-line" aria-hidden="true">
+      @if (loading()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+    </div>
+
+    @if (failure()) {
+      <div class="state-block" role="alert">
+        <mat-icon>cloud_off</mat-icon>
+        <p>These tickets could not be loaded.</p>
+        <button matButton="filled" type="button" (click)="reload()">Try again</button>
+      </div>
+    } @else {
+      <table
+        mat-table
+        [dataSource]="page().items"
+        matSort
+        [matSortActive]="sort().active"
+        [matSortDirection]="sort().direction"
+        matSortDisableClear="false"
+        (matSortChange)="onSortChange($event)"
+        class="tickets-table"
+      >
+        <ng-container matColumnDef="ticketNumber">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Ticket</th>
+          <td mat-cell *matCellDef="let ticket">
+            <a class="tickets-link" [routerLink]="['/tickets', ticket.id]">
+              {{ ticket.ticketNumber }}
+            </a>
+          </td>
+        </ng-container>
+
+        <!-- No sort header: `title` is not in the API's sortable set and asking would be a 400. -->
+        <ng-container matColumnDef="title">
+          <th mat-header-cell *matHeaderCellDef>Title</th>
+          <td mat-cell *matCellDef="let ticket" class="tickets-title">
+            <span [matTooltip]="ticket.title ?? ''" matTooltipShowDelay="600">
+              {{ ticket.title }}
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+          <td mat-cell *matCellDef="let ticket">
+            <span class="pill" [class]="'status-' + tone(ticket.status)">
+              {{ humanise(ticket.status) }}
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="priority">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Priority</th>
+          <td mat-cell *matCellDef="let ticket">
+            <span class="pill" [class]="'priority-' + tone(ticket.priority)">
+              {{ humanise(ticket.priority) }}
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="application">
+          <th mat-header-cell *matHeaderCellDef>Application</th>
+          <td mat-cell *matCellDef="let ticket">
+            <span class="tickets-app">{{ ticket.applicationName }}</span>
+            <small>{{ ticket.moduleName }}</small>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="raisedBy">
+          <th mat-header-cell *matHeaderCellDef>Raised by</th>
+          <td mat-cell *matCellDef="let ticket">{{ ticket.raisedBy }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="assignedTo">
+          <th mat-header-cell *matHeaderCellDef>Assigned to</th>
+          <td mat-cell *matCellDef="let ticket">
+            @if (ticket.assignedTo) {
+              {{ ticket.assignedTo }}
+            } @else {
+              <span class="tickets-unassigned">Unassigned</span>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="createdAt">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Raised</th>
+          <!-- An instant from the API; the pipe renders it in the reader's own zone, which is the
+               entire reason those columns are TIMESTAMPTZ. -->
+          <td mat-cell *matCellDef="let ticket" [matTooltip]="ticket.createdAt | date: 'long'">
+            {{ ticket.createdAt | date: 'd MMM, HH:mm' }}
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns()"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns()"></tr>
+      </table>
+
+      @if (page().items.length === 0 && !loading()) {
+        <div class="state-block">
+          <mat-icon>inbox</mat-icon>
+          @if (filtersApplied()) {
+            <p>No tickets match these filters.</p>
+            <button matButton type="button" (click)="clearFilters()">Clear filters</button>
+          } @else {
+            <p>There are no tickets here yet.</p>
+          }
+        </div>
+      }
+    }
+
+    <!-- length comes from X-Total-Count, not from the rows: the table only holds one page. -->
+    <mat-paginator
+      [length]="page().totalCount"
+      [pageIndex]="page().pageNumber"
+      [pageSize]="page().pageSize"
+      [pageSizeOptions]="[10, 25, 50, 100]"
+      (page)="onPageChange($event)"
+      showFirstLastButtons
+    />
+  </div>
+</section>
