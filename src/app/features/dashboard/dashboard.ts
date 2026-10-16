@@ -115,8 +115,6 @@ export class Dashboard {
   protected readonly recent = computed(() => this.recentResource.value() ?? []);
   protected readonly recentFailed = this.recentResource.error;
 
-  protected readonly canCreate = computed(() => this.auth.has('TICKET_CREATE'));
-
   /**
    * True until the server says otherwise.
    *

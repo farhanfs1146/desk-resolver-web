@@ -137,7 +137,7 @@ src/
 ├── styles.scss         the Material theme, the design tokens, the page chrome, Material overrides
 ├── styles/
 │   ├── _theme-colors.scss  generated M3 palettes — see Look and feel
-│   ├── _page.scss          .page / .surface / .state-block / .avatar, global
+│   ├── _page.scss          .page / .surface / .state-block / .avatar / .search-chip, global
 │   └── _status-pills.scss  status and priority colours, a mixin
 └── app/
     ├── core/
@@ -148,6 +148,8 @@ src/
     │   ├── theme.ts    the light/dark preference
     │   └── notifications.ts  what the header's bell shows, and how each line reads
     ├── layout/shell/   the rail and header around every signed-in screen
+    ├── layout/command-palette/  Ctrl+K: every screen the user may open, in one list,
+    │                            plus the header search box that opens it
     ├── features/       one folder per screen, each lazily loaded
     └── app.config.ts   providers; also where the session is restored before routing starts
 ```
@@ -242,10 +244,17 @@ per-component CSS budget. Each screen still sets its own `--page-max`.
 `layout/shell/shell.scss` (~6.6 kB) and `features/dashboard/dashboard.scss` (~6.6 kB). Both are
 expected rather than regressions — the rail has three states (full, collapsed, overlay drawer), and
 the dashboard is the widest screen here, carrying a figure row, two breakdown panels and an activity
-list. The error threshold is 8 kB and nothing is near it. Roughly 1.6 kB of each is the
-`_status-pills.scss` mixin, which is duplicated by design into every component that renders a
-ticket. Raise the budget in `angular.json` if the warning is unwanted — but only two components are
-over it, which is the signal worth keeping.
+list. Roughly 1.6 kB of each is the `_status-pills.scss` mixin, which is duplicated by design into
+every component that renders a ticket. Raise the budget in `angular.json` if the warning is unwanted
+— but only two components are over it, which is the signal worth keeping.
+
+The 8 kB figure in that budget is an **error**, not a warning, and the shell has run into it twice.
+A search field built into `shell.scss` took it to 8.06 kB and the build failed outright. The second
+time was closer and quieter: the search box that replaced that field took it to 7.69 kB, which passes
+with 310 bytes to spare — not a margin to leave the frame of the whole application sitting on. Both
+are why `SearchTrigger` is a component rather than markup in `shell.html`: its styles are its own, and
+the shell is back to 6.6 kB. If a third rule ever needs to go in there, that is the signal to split
+the header out, not to raise the budget.
 
 ## Notifications
 
@@ -296,7 +305,8 @@ delivery is a backend change (see its README). No per-user preferences, and no d
 | --- | --- | --- |
 | `/login` | — | Full-page, outside the shell |
 | `/dashboard` | `TICKET_READ_OWN` or `TICKET_READ_ALL` | **The landing route** — `''` redirects here |
-| `/tickets` | `TICKET_READ_OWN` or `TICKET_READ_ALL` | Filters, sorting, header-based paging |
+| `/tickets` | `TICKET_READ_OWN` or `TICKET_READ_ALL` | Filters, search (`?q=`), sorting, paging |
+| Ctrl+K | a session | The command palette — not a route; a dialog over whatever is open |
 | `/tickets/new` | `TICKET_CREATE` (+ `APPLICATION_READ` to pick) | Raise a ticket |
 | `/tickets/:id` | the same pair | Detail, discussion, attachments, history |
 | `/admin/users` | `USER_READ` (`USER_MANAGE` to change anything) | Accounts and their roles |
@@ -304,7 +314,24 @@ delivery is a backend change (see its README). No per-user preferences, and no d
 | `/account` | a session | Own roles and permissions; change own password |
 | `/forbidden` | a session | Where `permissionGuard` sends the unentitled |
 
-Five things in the ticket screens are worth knowing before changing them.
+Six things in the ticket screens are worth knowing before changing them.
+
+**The search lives in the URL, and nothing else holds a copy of it.** `?q=` is the whole of the
+state. `TicketList` reads it with `requireSync`, so a pasted link does not flash the unfiltered queue
+past first, and the chip in the filter bar is how the list says it read one — the lede already claims
+"matching these filters", and this is the filter that is not a control in that row. Removing the chip
+drops the parameter, which is also how the search is cleared.
+
+What writes it is the **command palette**, not a field on this screen. See the section below.
+
+The page index is a `linkedSignal` sourced from the term, so a new search starts at page one —
+otherwise page 4 of the old result set becomes page 4 of a one-page one, which the API answers with
+an empty body and a reader reads as "no tickets".
+
+The server matches the term case-insensitively against ticket number, title and description, as a
+literal substring: `%` and `_` are escaped, so they mean those characters rather than LIKE's
+wildcards. And it is ANDed with the ownership restriction, so a search cannot reach a ticket the user
+could not already open.
 
 **Sortable columns are a server whitelist.** `GET /api/tickets` accepts `createdAt`, `updatedAt`,
 `priority`, `status`, `ticketNumber` and `id` — nothing else, and anything else is a 400. `title` has
@@ -321,6 +348,18 @@ preferring its RFC 5987 `filename*` form, with the list row's `fileName` as the 
 specifically, and the comment and attachment panels assert their own. A panel whose permission is
 missing asks for nothing at all, instead of firing a request to display its 403.
 
+**Business impact is a drop-down, and it is about scope.** Five options, rendered in the order
+`BUSINESS_IMPACTS` declares them rather than sorted — the list is a scale from one person to
+everybody, and sorting it alphabetically would scatter that. It was a free-text box with a
+50-character limit until the API's `V23`; the four tickets that existed by then had spelled the same
+answer two ways, which is the whole argument. The label a reader sees is humanised
+("Multiple departments"), while what goes over the wire is the constant, because the API matches
+those names exactly — `ticket-create.spec.ts` has the test that fails if the two are ever swapped.
+
+The blank option reads "Not sure / not stated" and sends **nothing**. The field is optional, and an
+absent impact means the requester did not say, which is a different claim from the narrowest option.
+`null` would be a 400, and so would `''`.
+
 **The create form never asks for a module.** `CreateTicketRequest` carries `moduleName` alongside
 `applicationId`, which looks like a second question and is not one: the server rejects any module
 that is not that application's own, case-insensitively. An `applications` row *is* an application
@@ -333,6 +372,62 @@ that value means *in the reader's own zone*. That is the whole point of the API 
 datetimes: it will not guess a zone, and the browser is the one party that does not have to.
 `/tickets/new` is also declared **before** `/tickets/:id`, and that order is load-bearing — swapped,
 the router would resolve `new` as an id.
+
+## The command palette
+
+**Ctrl+K** (or Cmd+K) anywhere inside the shell opens a dialog listing every screen this user may
+open, grouped as the rail groups them. Arrow keys move, Enter opens, Escape closes, and clicking a row
+does the same as Enter on it. Typing filters by label *and* by group name, so "admin" finds People and
+Applications.
+
+The header carries a **search box** that opens the same thing — and it is a button, not a field. It
+takes no typing: clicking it opens the palette, and the palette owns the input. A real field there
+plus a dialog here would be two places to type a search, kept in step with each other for no gain.
+The `Ctrl+K` pill printed on its right is what resolves the ambiguity, and it is most of the reason
+the control is drawn at all: a shortcut nothing points at is a feature only the person who built it
+knows about. It is one pill rather than two key caps on purpose — it names a single shortcut, where
+the palette footer names several keys individually and draws each as its own cap. Below 768px it collapses to the icon it already contains, since the hint, the keys, the
+title and three controls cannot share one row — and that shortcut is not on a phone keyboard anyway.
+
+Five things about it are deliberate.
+
+**It reads no permissions and calls no API.** `Shell.sections` has already decided what this user may
+reach, and the palette is handed that list. A palette with its own copy would be a second answer to
+the same question, and the half that was wrong would be the one nobody looks at.
+
+**It returns a choice; the shell acts on it.** `PaletteChoice` is either a path to navigate to or a
+term to search for. That keeps the dialog testable without a router, and it keeps the two kinds of
+outcome beside each other in `Shell.act` where the difference between them is visible.
+
+**The ticket search is the last row, and only appears once something has been typed.** Going
+somewhere is what the palette is for, so Enter opens a screen whenever one matches; the search is what
+is left when nothing does, and then it is the only row and Enter picks it. It is offered at all only
+to somebody holding `TICKET_READ_OWN` or `TICKET_READ_ALL`.
+
+**`preventDefault` on the shortcut is not optional.** Ctrl+K focuses Firefox's own search bar and puts
+Chrome's address bar into search mode. Without it the palette opens behind a focused address bar.
+
+**The box is a component, `SearchTrigger`, beside the palette rather than inside the shell.** It
+belongs to the palette rather than to the shell's layout — and `shell.scss` is the one stylesheet
+here where another forty lines is a build failure rather than a warning. See **Look and feel**.
+
+This replaced a permanent search field in the header. The field was always present and did one thing;
+this is summoned, lists what the rail lists, costs nothing when closed — and it is what a search box
+in a toolbar is usually standing in for anyway: not "filter this screen" but "take me somewhere".
+
+### Raising a ticket is offered in one place
+
+The ticket list's own header, and nowhere else. It used to be in three: a filled **New ticket** button
+in the shell's header on every screen, a **Raise a ticket** button on the dashboard, and the one on
+the list. Three buttons for one action is three things to keep worded the same, and two of them sat on
+screens that are not about creating anything — the dashboard is a page of counts.
+
+The rail still carries `/tickets/new`, and so does the palette, because navigation is a different
+claim: a list of destinations says where you may go, while a filled button says what to do next. The
+dashboard's empty state now points at `/tickets` rather than straight at the form, so an empty
+dashboard still has a way forward without becoming a fourth place to offer the action.
+
+`shell.spec.ts` pins both halves — no create link in the header, `/tickets/new` still in the rail.
 
 ## The administration screens
 
@@ -381,18 +476,21 @@ bad idea — a number nothing verifies is a comment that rots — and it rotted 
 four endpoints.)
 
 What is missing is depth rather than coverage: no saved filters or views, no bulk actions, no
-dashboard or reporting, and no e2e tests (`ng e2e` has no runner configured).
+reporting beyond the dashboard's own figures, and no e2e tests (`ng e2e` has no runner configured).
 
-Two of those gaps are the API's rather than this client's, and are the reason the chrome looks
-sparser than a help desk's usually does:
+One gap that used to be the API's is now only unbuilt:
 
-- **There is no search box in the header**, because `TicketFilters` has no text field and no endpoint
-  accepts one. A box that filtered only the rows already on screen would look like search and not be
-  it, which is worse than its absence. `GET /api/tickets` would need a `q` parameter.
-- **There are no statistic tiles on the ticket list.** The list's header line states
-  `X-Total-Count`, which is real, but "24 open / 3 overdue" needs counts per status and the API has
-  no aggregate endpoint — deriving them from one page would be a number that silently means "on this
-  page" while reading as "in total".
+- **There are no statistic tiles on the ticket list.** This used to read "the API has no aggregate
+  endpoint", which was the whole reason — deriving counts from one page gives a number that silently
+  means "on this page" while reading as "in total". `GET /api/tickets/stats` now answers exactly
+  those counts, respecting the caller's visibility, and `/dashboard` is built on it. Putting the same
+  figures above the list is work nobody has done, not a wall.
+
+(This section also used to say there was no search box in the header, because `TicketFilters` had no
+text field and no endpoint accepted one. `GET /api/tickets` now takes `q`, and the way in is Ctrl+K —
+see **The command palette**. Deep links from the dashboard's tiles into a filtered list are still
+missing, and now need less than they did: `?q=` proved the plumbing, but the other filters are still
+component state rather than URL state, so a link to "overdue tickets" has nothing to point at.)
 
 Two further gaps on the API side affect this client:
 

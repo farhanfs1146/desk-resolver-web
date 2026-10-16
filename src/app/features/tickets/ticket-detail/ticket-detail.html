@@ -72,7 +72,9 @@
 
           @if (ticket.businessImpact) {
             <h2>Business impact</h2>
-            <p class="detail-text">{{ ticket.businessImpact }}</p>
+            <!-- COMPANY_WIDE is not something to put in front of a person. The same `humanise` the
+                 status and priority labels go through. -->
+            <p class="detail-text">{{ humanise(ticket.businessImpact) }}</p>
           }
         </section>
 

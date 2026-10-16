@@ -115,15 +115,13 @@
 
       <span class="header-spacer"></span>
 
-      <!-- The screen's own primary action lives on the screen; this is the one action worth having
-           on every screen, because raising a ticket is what most people opened the application to
-           do. Label hidden below 640px, where the icon alone has to carry it. -->
-      @if (canCreate()) {
-        <a matButton="filled" class="header-cta" routerLink="/tickets/new">
-          <mat-icon>add</mat-icon>
-          <span class="cta-label">New ticket</span>
-        </a>
-      }
+      <!-- Looks like a field, is a button: it opens the palette, which owns the input. See
+           SearchTrigger for why it is that way round, and why it is a component.
+
+           After the spacer, so it sits with the controls on the right rather than beside the title.
+           It is the first of them, immediately left of the appearance toggle: the three that follow
+           are each a single icon, and a 20rem box in the middle of them would break that run. -->
+      <app-search-trigger (activate)="openPalette()" />
 
       <button
         matIconButton

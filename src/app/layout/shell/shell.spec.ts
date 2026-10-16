@@ -1,12 +1,15 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { Router, provideRouter } from '@angular/router';
+import { Subject } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { AuthenticationResponse, Permission } from '../../core/api/models';
 import { Auth } from '../../core/auth/auth';
 import { authInterceptor } from '../../core/auth/auth-interceptor';
+import { CommandPaletteData, PaletteChoice } from '../command-palette/command-palette';
 import { Shell } from './shell';
 
 const LOGIN_URL = `${environment.apiBaseUrl}/auth/login`;
@@ -25,6 +28,8 @@ interface Bindings {
   initials: () => string;
   collapsed: () => boolean;
   toggleRail: () => void;
+  canSearchTickets: () => boolean;
+  openPalette: () => void;
 }
 
 function bindingsOf(fixture: ComponentFixture<Shell>): Bindings {
@@ -163,6 +168,33 @@ describe('Shell', () => {
     });
   });
 
+  /**
+   * Raising a ticket is offered in exactly one place: the ticket list's own header.
+   *
+   * <p>It used to be in three - here, on the dashboard, and there - which is three things to keep
+   * worded the same and two of them on screens that are not about creating anything. The rail still
+   * carries `/tickets/new` as a *destination*, which is a different claim: navigation says where you
+   * may go, and a filled button says what to do next.
+   */
+  describe('the create action', () => {
+    it('is not repeated in the header', () => {
+      const fixture = render(['TICKET_READ_OWN', 'TICKET_CREATE']);
+      settleNotifications(fixture);
+
+      const header = (fixture.nativeElement as HTMLElement).querySelector('.app-header');
+
+      expect(header).not.toBeNull();
+      expect(header?.querySelector('[href="/tickets/new"]')).toBeNull();
+    });
+
+    it('is still reachable from the rail, which is navigation rather than a call to action', () => {
+      const fixture = render(['TICKET_READ_OWN', 'TICKET_CREATE']);
+      settleNotifications(fixture);
+
+      expect(paths(fixture)).toContain('/tickets/new');
+    });
+  });
+
   describe('avatar initials', () => {
     it('takes the first letter of the first two names', () => {
       const fixture = render(['TICKET_READ_OWN'], 'Farhan Ali Khan');
@@ -176,6 +208,183 @@ describe('Shell', () => {
       settleNotifications(fixture);
 
       expect(bindingsOf(fixture).initials()).toBe('F');
+    });
+  });
+
+  /**
+   * Ctrl+K and the command palette.
+   *
+   * <p>The palette's own behaviour - what it lists, what the arrow keys do - is tested beside it in
+   * `command-palette.spec.ts`. What belongs here is the three things the shell is responsible for:
+   * that the shortcut reaches it and the browser does not keep the keystroke, that the destinations
+   * handed to it are the ones the rail already decided on, and that a choice coming back is acted
+   * on.
+   */
+  describe('the command palette', () => {
+    /** Stands in for the dialog, so a choice can be handed back without rendering one. */
+    function interceptPalette(): {
+      open: ReturnType<typeof vi.spyOn>;
+      close: (choice: PaletteChoice | undefined) => void;
+    } {
+      const closed = new Subject<PaletteChoice | undefined>();
+      const open = vi.spyOn(TestBed.inject(MatDialog), 'open').mockReturnValue({
+        afterClosed: () => closed.asObservable(),
+      } as unknown as MatDialogRef<unknown>);
+
+      return {
+        open,
+        close: (choice) => {
+          closed.next(choice);
+          closed.complete();
+          TestBed.tick();
+        },
+      };
+    }
+
+    /** Dispatched on `document`, because that is where the shortcut listens. */
+    function pressCtrlK(): KeyboardEvent {
+      const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, cancelable: true });
+      document.dispatchEvent(event);
+      TestBed.tick();
+      return event;
+    }
+
+    /** What the palette was handed, from the one call that opened it. */
+    function dataFrom(open: ReturnType<typeof vi.spyOn>): CommandPaletteData {
+      return (open.mock.calls[0][1] as { data: CommandPaletteData }).data;
+    }
+
+    it('is opened by the search box in the header', () => {
+      const fixture = render(['TICKET_READ_OWN']);
+      settleNotifications(fixture);
+      const palette = interceptPalette();
+
+      const box = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+        'app-search-trigger button',
+      );
+
+      // It looks like a field and is a button. Somebody who never learns the shortcut still has a
+      // way in, which is the entire reason it is drawn at all.
+      expect(box).not.toBeNull();
+      box?.click();
+      TestBed.tick();
+
+      expect(palette.open).toHaveBeenCalledTimes(1);
+    });
+
+    it('opens on Ctrl+K, and keeps the keystroke from the browser', () => {
+      const fixture = render(['TICKET_READ_OWN']);
+      settleNotifications(fixture);
+      const palette = interceptPalette();
+
+      const event = pressCtrlK();
+
+      expect(palette.open).toHaveBeenCalledTimes(1);
+      // Firefox focuses its own search bar on Ctrl+K and Chrome puts the address bar into search
+      // mode, so without this the palette opens behind a focused address bar.
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('ignores the key without a modifier, and other modified keys', () => {
+      const fixture = render(['TICKET_READ_OWN']);
+      settleNotifications(fixture);
+      const palette = interceptPalette();
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k' }));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', ctrlKey: true }));
+      TestBed.tick();
+
+      expect(palette.open).not.toHaveBeenCalled();
+    });
+
+    it('does not stack a second palette on the first', () => {
+      const fixture = render(['TICKET_READ_OWN']);
+      settleNotifications(fixture);
+      const palette = interceptPalette();
+
+      pressCtrlK();
+      pressCtrlK();
+      pressCtrlK();
+
+      expect(palette.open).toHaveBeenCalledTimes(1);
+
+      // And it opens again once that one has gone.
+      palette.close(undefined);
+      pressCtrlK();
+      expect(palette.open).toHaveBeenCalledTimes(2);
+    });
+
+    it('offers exactly the destinations the rail offers', () => {
+      const fixture = render(['TICKET_READ_OWN', 'TICKET_CREATE']);
+      settleNotifications(fixture);
+      const palette = interceptPalette();
+
+      pressCtrlK();
+
+      // `Shell.sections` is the one place that decides this. A palette with its own list would be a
+      // second answer to the same question.
+      expect(dataFrom(palette.open).destinations.map((d) => d.path)).toEqual(paths(fixture));
+      expect(dataFrom(palette.open).destinations.map((d) => d.group)).toEqual([
+        'Workspace',
+        'Workspace',
+        'Workspace',
+      ]);
+    });
+
+    it('tells the palette whether a ticket search is worth offering', () => {
+      const allowed = render(['TICKET_READ_OWN']);
+      settleNotifications(allowed);
+      const first = interceptPalette();
+      pressCtrlK();
+      expect(dataFrom(first.open).canSearchTickets).toBe(true);
+      first.open.mockRestore();
+
+      const refused = render(['APPLICATION_READ']);
+      settleNotifications(refused);
+      const second = interceptPalette();
+      pressCtrlK();
+      expect(dataFrom(second.open).canSearchTickets).toBe(false);
+      expect(bindingsOf(refused).canSearchTickets()).toBe(false);
+    });
+
+    it('goes where a chosen destination points', () => {
+      const fixture = render(['TICKET_READ_OWN']);
+      settleNotifications(fixture);
+      const palette = interceptPalette();
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+      pressCtrlK();
+      palette.close({ kind: 'navigate', path: '/dashboard' });
+
+      expect(navigate).toHaveBeenCalledWith('/dashboard');
+    });
+
+    it('turns a chosen search into ?q= on the ticket list', () => {
+      const fixture = render(['TICKET_READ_OWN']);
+      settleNotifications(fixture);
+      const palette = interceptPalette();
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+      pressCtrlK();
+      palette.close({ kind: 'search', term: 'payslip' });
+
+      // No `replaceUrl`: a palette search is one deliberate act, so Back should return the reader to
+      // wherever they searched from.
+      expect(navigate).toHaveBeenCalledWith(['/tickets'], { queryParams: { q: 'payslip' } });
+    });
+
+    it('does nothing when the palette is dismissed', () => {
+      const fixture = render(['TICKET_READ_OWN']);
+      settleNotifications(fixture);
+      const palette = interceptPalette();
+      const byUrl = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+      pressCtrlK();
+      palette.close(undefined);
+
+      expect(byUrl).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
     });
   });
 

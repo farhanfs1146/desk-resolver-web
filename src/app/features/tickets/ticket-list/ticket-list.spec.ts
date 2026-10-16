@@ -3,7 +3,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Sort } from '@angular/material/sort';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
+import { BehaviorSubject } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
 import {
@@ -33,6 +34,9 @@ interface Bindings {
   columns: () => string[];
   page: () => { totalCount: number; pageNumber: number; hasNext: boolean };
   scopeLabel: () => string;
+  search: () => string;
+  filtersApplied: () => boolean;
+  clearSearch: () => void;
 }
 
 function bindingsOf(fixture: ComponentFixture<TicketList>): Bindings {
@@ -56,17 +60,35 @@ function session(permissions: Permission[]): AuthenticationResponse {
 describe('TicketList', () => {
   let backend: HttpTestingController;
 
+  /**
+   * The URL's query parameters, as something a test can push to.
+   *
+   * <p>A stub rather than real navigation, because the component only ever reads `ActivatedRoute`
+   * and what matters is what it does with a parameter - not the router's own routing, which is
+   * Angular's to test. A `BehaviorSubject` because the component reads this with `requireSync`,
+   * exactly as the real `queryParamMap` behaves.
+   */
+  let queryParams: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
+
   beforeEach(() => {
     sessionStorage.clear();
+    queryParams = new BehaviorSubject(convertToParamMap({}));
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
         provideRouter([]),
+        { provide: ActivatedRoute, useValue: { queryParamMap: queryParams.asObservable() } },
       ],
     });
     backend = TestBed.inject(HttpTestingController);
   });
+
+  /** Puts a term in the URL, as the header's search box would. */
+  function searchFor(term: string): void {
+    queryParams.next(convertToParamMap({ q: term }));
+    TestBed.tick();
+  }
 
   afterEach(() => {
     sessionStorage.clear();
@@ -197,6 +219,72 @@ describe('TicketList', () => {
     TestBed.tick();
 
     expect((await respond(fixture)).has('sort')).toBe(false);
+  });
+
+  /**
+   * The search, which is the one filter this screen does not own: it is typed in the header and
+   * arrives as `?q=`. So what is tested here is the reading of it - that it reaches the API, that a
+   * blank one does not, and that changing it does not leave the reader on a page that no longer
+   * exists.
+   */
+  describe('the search term in the URL', () => {
+    it('is sent to the API as q', async () => {
+      queryParams.next(convertToParamMap({ q: 'payslip' }));
+      const fixture = render();
+
+      // Not a second request after an unfiltered first one: the parameter is read synchronously, so
+      // somebody following a link to a search never sees the whole queue flash past first.
+      const params = await respond(fixture);
+
+      expect(params.get('q')).toBe('payslip');
+      expect(bindingsOf(fixture).filtersApplied()).toBe(true);
+    });
+
+    it('is not sent when it is blank or only whitespace', async () => {
+      queryParams.next(convertToParamMap({ q: '   ' }));
+      const fixture = render();
+      const params = await respond(fixture);
+
+      // `?q=` is what a cleared search box produces, and it has to mean the unfiltered list rather
+      // than a search for nothing.
+      expect(params.has('q')).toBe(false);
+      expect(bindingsOf(fixture).search()).toBe('');
+      expect(bindingsOf(fixture).filtersApplied()).toBe(false);
+    });
+
+    it('returns to the first page when it changes', async () => {
+      queryParams.next(convertToParamMap({ q: 'payslip' }));
+      const fixture = render();
+      await respond(fixture);
+
+      bindingsOf(fixture).pageIndex.set(3);
+      TestBed.tick();
+      expect((await respond(fixture)).get('page')).toBe('3');
+
+      searchFor('printer');
+
+      // Page 4 of the previous result set would be page 4 of this one, which the API answers with
+      // an empty body - and an empty body reads as "no tickets", not as "wrong page".
+      const params = await respond(fixture);
+      expect(params.get('q')).toBe('printer');
+      expect(params.get('page')).toBe('0');
+    });
+
+    it('is dropped from the URL rather than from a signal of its own', async () => {
+      queryParams.next(convertToParamMap({ q: 'payslip' }));
+      const fixture = render();
+      await respond(fixture);
+
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      bindingsOf(fixture).clearSearch();
+
+      // The URL is the only copy of the term, so removing it from there is what also empties the
+      // header's box. `replaceUrl` because an abandoned search is not somewhere to come back to.
+      expect(navigate).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({ queryParams: {}, replaceUrl: true }),
+      );
+    });
   });
 
   describe('permissions', () => {

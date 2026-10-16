@@ -324,6 +324,14 @@ body {
   box-shadow: var(--app-shadow-lg) !important;
 }
 
+// The command palette supplies its own header, list and footer, each with its own padding and its own
+// divider. Material's dialog padding around all of that would put a margin between the surface and
+// the dividers, leaving three lines that stop short of the edge they are meant to span.
+.palette-panel .mat-mdc-dialog-surface {
+  padding: 0;
+  overflow: hidden;
+}
+
 .mat-mdc-card {
   border-radius: var(--app-radius-md) !important;
 }

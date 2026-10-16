@@ -1,5 +1,13 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  linkedSignal,
+  signal,
+} from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,7 +17,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { map } from 'rxjs';
 
 import { PRIORITIES, Priority, TICKET_STATUSES, TicketStatus } from '../../../core/api/models';
 import { pageFromHeaders } from '../../../core/api/page';
@@ -51,6 +60,8 @@ const SORTABLE = new Set(['createdAt', 'updatedAt', 'priority', 'status', 'ticke
 export class TicketList {
   private readonly tickets = inject(Tickets);
   private readonly auth = inject(Auth);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   protected readonly statuses = TICKET_STATUSES;
   protected readonly priorities = PRIORITIES;
@@ -58,7 +69,42 @@ export class TicketList {
   protected readonly status = signal<TicketStatus | null>(null);
   protected readonly priority = signal<Priority | null>(null);
   protected readonly scope = signal<Scope>('involved');
-  protected readonly pageIndex = signal(0);
+
+  /**
+   * The search term, read from `?q=` rather than held in a signal of its own.
+   *
+   * <p>Every other filter here is component state, and that is still right for them: they are how
+   * one person is looking through a queue at this moment. The search is different in two ways. It is
+   * typed into the header, which is outside this component - and a set of results is the kind of
+   * thing people paste to each other. The URL answers both at once, so neither needs a service
+   * between the two components.
+   *
+   * <p>`requireSync` because `queryParamMap` emits the current parameters on subscribe. Without it
+   * the first render would be an unfiltered request for a URL that *does* have a term, and somebody
+   * following a link to a search would watch the whole queue flash past before their results
+   * arrived.
+   *
+   * <p>Stripped here as well as on the server. The same URL has to produce the same request, and
+   * `?q=%20` would otherwise be a different signal value from `?q=` while meaning the same thing.
+   */
+  protected readonly search = toSignal(
+    this.route.queryParamMap.pipe(map((params) => params.get('q')?.trim() ?? '')),
+    { requireSync: true },
+  );
+
+  /**
+   * Zero-based, and reset to the first page whenever the search changes.
+   *
+   * <p>A `linkedSignal` rather than an effect, because that is the shape of this exactly: the page
+   * number is *derived* from the search - a new one starts at the beginning - and then written over
+   * by the paginator. Without the reset, paging through one term and then searching another would
+   * ask for page 4 of a result set with one page in it; the API answers that with an empty body, and
+   * an empty body reads as "no tickets" rather than as "wrong page".
+   */
+  protected readonly pageIndex = linkedSignal<string, number>({
+    source: this.search,
+    computation: () => 0,
+  });
   // 25 rather than the API's default of 20, and capped at the API's maximum of 100 in the template.
   protected readonly pageSize = signal(25);
   protected readonly sort = signal<Sort>({ active: 'createdAt', direction: 'desc' });
@@ -82,6 +128,10 @@ export class TicketList {
       priority: this.priority() ?? undefined,
       raisedBy: scope === 'raised' ? userId : undefined,
       assignedTo: scope === 'assigned' ? userId : undefined,
+      // Empty means absent. `toParams` would drop it anyway; saying so here keeps the query value
+      // itself honest, so two screens with no search produce the same object rather than two that
+      // differ in a field that does nothing.
+      q: this.search() || undefined,
       page: this.pageIndex(),
       size: this.pageSize(),
       // Only a sort the API accepts, and only when a direction is set: clicking a sort header a
@@ -135,7 +185,11 @@ export class TicketList {
   });
 
   protected readonly filtersApplied = computed(
-    () => this.status() !== null || this.priority() !== null || this.scope() !== 'involved',
+    () =>
+      this.status() !== null ||
+      this.priority() !== null ||
+      this.scope() !== 'involved' ||
+      this.search() !== '',
   );
 
   protected onSortChange(sort: Sort): void {
@@ -158,6 +212,25 @@ export class TicketList {
     this.priority.set(null);
     this.scope.set('involved');
     this.pageIndex.set(0);
+    this.clearSearch();
+  }
+
+  /**
+   * Drops `?q=` from the URL, which empties the header's box too - it reads the same parameter, so
+   * there is no second piece of state to keep in step.
+   *
+   * <p>`replaceUrl` because abandoning a search is not a place to come back to: Back from here should
+   * lead wherever the reader was before the list, not into the search they just dismissed.
+   */
+  protected clearSearch(): void {
+    if (this.search() === '') {
+      return;
+    }
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {},
+      replaceUrl: true,
+    });
   }
 
   protected reload(): void {

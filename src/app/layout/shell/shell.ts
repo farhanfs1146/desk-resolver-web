@@ -3,6 +3,7 @@ import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  HostListener,
   computed,
   effect,
   inject,
@@ -11,6 +12,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -22,6 +24,12 @@ import { filter, map } from 'rxjs';
 import { NotificationCentre, NotificationLine } from '../../core/notifications';
 import { Auth } from '../../core/auth/auth';
 import { Theme } from '../../core/theme';
+import {
+  CommandPalette,
+  CommandPaletteData,
+  PaletteChoice,
+} from '../command-palette/command-palette';
+import { SearchTrigger } from '../command-palette/search-trigger';
 
 /** One navigation destination. `exact` exists only for `/tickets`, for the reason noted below. */
 interface NavLink {
@@ -66,6 +74,7 @@ const RAIL_COLLAPSED_KEY = 'deskresolver.railCollapsed';
     RouterLink,
     RouterLinkActive,
     RouterOutlet,
+    SearchTrigger,
   ],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
@@ -75,6 +84,7 @@ export class Shell {
   private readonly auth = inject(Auth);
   private readonly router = inject(Router);
   private readonly breakpoints = inject(BreakpointObserver);
+  private readonly dialogs = inject(MatDialog);
 
   protected readonly theme = inject(Theme);
   protected readonly notifications = inject(NotificationCentre);
@@ -201,7 +211,25 @@ export class Shell {
       .join('');
   });
 
-  protected readonly canCreate = computed(() => this.auth.has('TICKET_CREATE'));
+  // --------------------------------------------------------------------------- the command palette
+
+  /**
+   * The open palette, or null. Held only so that a second Ctrl+K cannot stack a dialog on the first.
+   *
+   * <p>A plain field rather than a signal: nothing renders from it, and the template has no reason
+   * to know whether the palette is open - the dialog is its own overlay.
+   */
+  private paletteRef: MatDialogRef<CommandPalette, PaletteChoice> | null = null;
+
+  /**
+   * Whether the palette should offer to search tickets, as opposed to only going places.
+   *
+   * <p>The same pair the Tickets link is gated on. Offering a search that can only answer 403 would
+   * be an invitation to a dead end.
+   */
+  protected readonly canSearchTickets = computed(() =>
+    this.auth.hasAny('TICKET_READ_OWN', 'TICKET_READ_ALL'),
+  );
 
   constructor() {
     // Close the drawer whenever the route changes. Without this, following a link on a phone leaves
@@ -210,6 +238,91 @@ export class Shell {
       this.navigated();
       this.drawerOpen.set(false);
     });
+  }
+
+  /**
+   * Ctrl+K, or Cmd+K, from anywhere inside the shell.
+   *
+   * <p>On `document` rather than on the host element, because the shortcut has to work wherever the
+   * focus happens to be - including inside a text field, which is the normal case while somebody is
+   * part-way through filling in a ticket.
+   *
+   * <p>`preventDefault` is not optional here. Ctrl+K is Firefox's shortcut for focusing its own
+   * search bar and Chrome's for putting the address bar into search mode, so without it the browser
+   * takes the keystroke and the palette opens behind a focused address bar.
+   */
+  @HostListener('document:keydown', ['$event'])
+  protected onShortcut(event: KeyboardEvent): void {
+    if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'k') {
+      return;
+    }
+
+    event.preventDefault();
+    this.openPalette();
+  }
+
+  /**
+   * Opens the palette on the destinations the rail has already decided this user may reach.
+   *
+   * <p>`sections()` is reused rather than a second list being written here, and that is the point:
+   * what a user may open is decided once. A palette with its own copy would be a second answer to
+   * the same question, and the half that was wrong would be the one nobody looks at.
+   */
+  protected openPalette(): void {
+    if (this.paletteRef) {
+      return;
+    }
+
+    const data: CommandPaletteData = {
+      destinations: this.sections().flatMap((section) =>
+        section.links.map((link) => ({
+          path: link.path,
+          label: link.label,
+          icon: link.icon,
+          group: section.label,
+        })),
+      ),
+      canSearchTickets: this.canSearchTickets(),
+    };
+
+    this.paletteRef = this.dialogs.open<CommandPalette, CommandPaletteData, PaletteChoice>(
+      CommandPalette,
+      {
+        data,
+        width: '34rem',
+        maxWidth: '92vw',
+        // High on the screen rather than centred. A dialog that grows and shrinks as its list
+        // filters would otherwise walk up and down the viewport while being typed into.
+        position: { top: '12vh' },
+        panelClass: 'palette-panel',
+        autoFocus: 'first-tabbable',
+      },
+    );
+
+    this.paletteRef.afterClosed().subscribe((choice) => {
+      this.paletteRef = null;
+      if (choice) {
+        this.act(choice);
+      }
+    });
+  }
+
+  /**
+   * Carries out whatever the palette was closed with.
+   *
+   * <p>Here rather than inside the palette, which returns a choice and acts on nothing. That keeps
+   * the dialog testable without a router, and it keeps the two kinds of choice beside each other
+   * where the difference between them is visible.
+   */
+  private act(choice: PaletteChoice): void {
+    if (choice.kind === 'navigate') {
+      void this.router.navigateByUrl(choice.path);
+      return;
+    }
+
+    // No `replaceUrl`. A palette search is one deliberate act rather than a keystroke, so there is
+    // no history to spam - and Back should return the reader to wherever they searched from.
+    void this.router.navigate(['/tickets'], { queryParams: { q: choice.term } });
   }
 
   protected toggleRail(): void {

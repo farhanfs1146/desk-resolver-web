@@ -36,6 +36,17 @@ interface Bindings {
   onExpectedByChange: (value: string) => void;
 }
 
+/**
+ * The body as JSON will render it - which is what the API actually receives.
+ *
+ * <p>An optional field this form does not fill is present on the request object with the value
+ * `undefined`, and serialisation is what removes it. Tests about whether a field was *sent* have to
+ * look here rather than at the object, or they cannot tell `undefined` from `null`.
+ */
+function wireOf(body: CreateTicketRequest): Record<string, unknown> {
+  return JSON.parse(JSON.stringify(body)) as Record<string, unknown>;
+}
+
 function bindingsOf(fixture: ComponentFixture<TicketCreate>): Bindings {
   return fixture.componentInstance as unknown as Bindings;
 }
@@ -198,10 +209,58 @@ describe('TicketCreate', () => {
       const request = backend.expectOne(TICKETS_URL);
       const body = request.request.body as CreateTicketRequest;
 
-      // `expectedBy: ""` would be a 400 on an Instant, and a blank businessImpact would be stored
-      // as an empty string. Absent means "not given".
+      // `expectedBy: ""` would be a 400 on an Instant, and so would `businessImpact: ""` now that
+      // it is an enum - an empty string is a constant the API does not have, not an absent answer.
+      // Absent means "not given", which is the only way to say it.
       expect(body.expectedBy).toBeUndefined();
       expect(body.businessImpact).toBeUndefined();
+      // Through JSON, because that is what the server receives. The request object does hold both
+      // keys - with the value `undefined` - and it is serialisation that drops them. Asserting on
+      // the object alone would not distinguish `undefined` from `null`, and `null` is what the API
+      // would reject.
+      expect(wireOf(body)).not.toHaveProperty('businessImpact');
+      expect(wireOf(body)).not.toHaveProperty('expectedBy');
+
+      request.flush({ id: 99 });
+      await fixture.whenStable();
+    });
+
+    it('sends a chosen business impact as the constant the API expects', async () => {
+      const fixture = render();
+      await withCatalogue(fixture);
+      fillValid(fixture);
+      bindingsOf(fixture).form.patchValue({ businessImpact: 'MULTIPLE_DEPARTMENTS' });
+
+      bindingsOf(fixture).submit();
+      const request = backend.expectOne(TICKETS_URL);
+      const body = request.request.body as CreateTicketRequest;
+
+      // Verbatim, not humanised. The label in the drop-down reads "Multiple departments"; what goes
+      // over the wire is the constant, and the API matches these names exactly - "Multiple
+      // departments" would be a 400. This is the test that fails if the two are ever swapped.
+      expect(body.businessImpact).toBe('MULTIPLE_DEPARTMENTS');
+
+      request.flush({ id: 99 });
+      await fixture.whenStable();
+    });
+
+    it('treats the "not stated" option as no answer rather than as a value', async () => {
+      const fixture = render();
+      await withCatalogue(fixture);
+      fillValid(fixture);
+
+      // Choosing an impact and then changing your mind back to the blank option. The control holds
+      // null, and null has to leave the body entirely - sending it would make "I do not know" into
+      // a claim about the ticket.
+      bindingsOf(fixture).form.patchValue({ businessImpact: 'COMPANY_WIDE' });
+      bindingsOf(fixture).form.patchValue({ businessImpact: null });
+
+      bindingsOf(fixture).submit();
+      const request = backend.expectOne(TICKETS_URL);
+
+      expect(wireOf(request.request.body as CreateTicketRequest)).not.toHaveProperty(
+        'businessImpact',
+      );
 
       request.flush({ id: 99 });
       await fixture.whenStable();

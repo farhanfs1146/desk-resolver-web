@@ -1,0 +1,67 @@
+@let highlighted = active();
+
+<div class="palette" (keydown)="onKeydown($event)">
+  <!-- The input keeps focus the whole time the palette is open, and the highlighted row is reported
+       through `aria-activedescendant` rather than by moving focus into the list. That is the combobox
+       pattern, and it is the reason the arrow keys are handled here rather than on the rows: the rows
+       are never focused, so they would never receive the event. -->
+  <div class="palette-field">
+    <mat-icon class="palette-field-icon" aria-hidden="true">search</mat-icon>
+    <input
+      #box
+      type="text"
+      class="palette-input"
+      role="combobox"
+      placeholder="Go to a screen, or search tickets"
+      aria-label="Go to a screen, or search tickets"
+      aria-expanded="true"
+      aria-controls="palette-list"
+      [attr.aria-activedescendant]="activeId()"
+      autocomplete="off"
+      cdkFocusInitial
+      [value]="term()"
+      (input)="onInput(box.value)"
+    />
+    <kbd class="palette-key">esc</kbd>
+  </div>
+
+  @if (rows().length === 0) {
+    <p class="palette-empty">Nothing here matches that.</p>
+  } @else {
+    <ul class="palette-list" id="palette-list" role="listbox" aria-label="Destinations">
+      @for (row of rows(); track row.id; let index = $index) {
+        <!-- `presentation`, because a listbox's children are its options: a heading that claimed to
+             be one would be announced as something selectable. -->
+        @if (row.heading) {
+          <li class="palette-heading" role="presentation">{{ row.heading }}</li>
+        }
+
+        <li
+          class="palette-row"
+          role="option"
+          [id]="row.id"
+          [class.palette-row-active]="index === highlighted"
+          [attr.aria-selected]="index === highlighted"
+          (click)="choose(row)"
+          (mouseenter)="active.set(index)"
+        >
+          <mat-icon class="palette-row-icon" aria-hidden="true">{{ row.icon }}</mat-icon>
+          <span class="palette-label">{{ row.label }}</span>
+          @if (index === highlighted) {
+            <kbd class="palette-key">enter</kbd>
+          }
+        </li>
+      }
+    </ul>
+  }
+
+  <!-- Said rather than left to be discovered. A dialog driven by the keyboard is only obvious to
+       somebody who already knows it is. -->
+  <div class="palette-foot">
+    <span><kbd class="palette-key">&uarr;</kbd><kbd class="palette-key">&darr;</kbd> to move</span>
+    <span><kbd class="palette-key">enter</kbd> to open</span>
+    <span class="palette-foot-end"
+      ><kbd class="palette-key">ctrl</kbd><kbd class="palette-key">k</kbd> anywhere</span
+    >
+  </div>
+</div>

@@ -192,6 +192,52 @@
   }
 }
 
+// An active search, shown in the filter bar it belongs to although it was typed in the header.
+//
+// Lives here beside `.filter-bar` rather than in the ticket list's own stylesheet, for the same
+// reason the bar does: it is a piece of that bar, and the next list to grow a search should get it
+// by using the class rather than by copying forty lines of it.
+//
+// A button, not a chip component. Material's chips bring selection, keyboard navigation within a
+// set, and a `mat-chip-listbox` around them - machinery for choosing among several things, which
+// this is not. This is one removable statement, so it is one thing to click.
+.search-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  max-width: 18rem;
+  height: 2rem;
+  padding: 0 0.625rem;
+  border: 1px solid color-mix(in srgb, var(--mat-sys-primary) 40%, transparent);
+  border-radius: 1rem;
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
+  color: var(--mat-sys-primary);
+  font: var(--mat-sys-label-large);
+  cursor: pointer;
+  transition: background-color var(--app-dur-fast) var(--app-ease-inout);
+
+  &:hover,
+  &:focus-visible {
+    background-color: color-mix(in srgb, var(--mat-sys-primary) 18%, transparent);
+  }
+
+  .mat-icon {
+    flex: 0 0 auto;
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+// Truncated rather than wrapped: the term can be a sentence somebody pasted, and a chip that grows
+// to three lines would push the whole bar around. The full text is in the search box above it.
+.search-chip-term {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 // Reserves the progress bar's height whether or not one is showing, so a table does not shift
 // down every time a filter changes.
 .load-line {

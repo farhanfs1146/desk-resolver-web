@@ -141,15 +141,15 @@
         <div class="create-row">
           <mat-form-field appearance="outline">
             <mat-label>Business impact (optional)</mat-label>
-            <input
-              matInput
-              formControlName="businessImpact"
-              [maxlength]="businessImpactMax"
-              placeholder="e.g. Department-level"
-            />
-            <mat-hint align="end">
-              {{ form.controls.businessImpact.value.length }} / {{ businessImpactMax }}
-            </mat-hint>
+            <!-- Rendered in the order the constant declares, not sorted: the list is a scale from
+                 one person to everybody, and sorting it alphabetically would scatter that. -->
+            <mat-select formControlName="businessImpact">
+              <mat-option [value]="null">Not sure / not stated</mat-option>
+              @for (option of businessImpacts; track option) {
+                <mat-option [value]="option">{{ humanise(option) }}</mat-option>
+              }
+            </mat-select>
+            <mat-hint>How many people it affects. How soon it is needed is the priority.</mat-hint>
             @if (serverError('businessImpact'); as message) {
               <mat-error>{{ message }}</mat-error>
             }

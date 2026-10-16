@@ -50,6 +50,25 @@
       </mat-select>
     </mat-form-field>
 
+    <!-- The term is typed in the header, so it has to be visible down here as well. The lede above
+         says "matching these filters", and this is the one filter that is not a control in this row -
+         without it a reader scanning for why the table is short would find nothing to explain it.
+         Removable from here too, because what you want to undo is usually the thing in front of
+         you. -->
+    @if (search() !== '') {
+      <button
+        class="search-chip"
+        type="button"
+        (click)="clearSearch()"
+        matTooltip="Remove this search"
+        [attr.aria-label]="'Remove the search for ' + search()"
+      >
+        <mat-icon aria-hidden="true">search</mat-icon>
+        <span class="search-chip-term">{{ search() }}</span>
+        <mat-icon aria-hidden="true">close</mat-icon>
+      </button>
+    }
+
     @if (filtersApplied()) {
       <button matButton type="button" (click)="clearFilters()">
         <mat-icon>filter_alt_off</mat-icon>
@@ -162,7 +181,17 @@
         <div class="state-block">
           <mat-icon>inbox</mat-icon>
           @if (filtersApplied()) {
-            <p>No tickets match these filters.</p>
+            @if (search() !== '') {
+              <!-- Quoting the term back is what tells a reader the search ran and found nothing,
+                   rather than the screen having failed to search. -->
+              <p>No tickets match &ldquo;{{ search() }}&rdquo;.</p>
+              <p class="state-hint">
+                The search reads ticket numbers, titles and descriptions - of the tickets you can
+                see.
+              </p>
+            } @else {
+              <p>No tickets match these filters.</p>
+            }
             <button matButton type="button" (click)="clearFilters()">Clear filters</button>
           } @else {
             <p>There are no tickets here yet.</p>

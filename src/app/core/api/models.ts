@@ -70,6 +70,29 @@ export const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
 
 export type Priority = (typeof PRIORITIES)[number];
 
+/**
+ * How far a ticket's problem reaches - **scope, not urgency**. How soon it needs fixing is
+ * `Priority`; together they are the impact-and-urgency pair a support desk triages on.
+ *
+ * <p>In this order, ascending, from one person to everybody. The order is meaningful here in the way
+ * `PRIORITIES` is and `TICKET_STATUSES` deliberately is not, so a drop-down should render it as
+ * written rather than alphabetically.
+ *
+ * <p>This was 50 characters of free text until the API's `V23`. Four tickets existed at the time and
+ * they said the same thing two ways - `Organization-Level` and `Organization Level` - which is the
+ * whole argument for the change. Those spellings are now **400s**, and so is the right constant in
+ * the wrong case: the API matches these names exactly.
+ */
+export const BUSINESS_IMPACTS = [
+  'SINGLE_USER',
+  'TEAM',
+  'DEPARTMENT',
+  'MULTIPLE_DEPARTMENTS',
+  'COMPANY_WIDE',
+] as const;
+
+export type BusinessImpact = (typeof BUSINESS_IMPACTS)[number];
+
 export const ISSUE_TYPES = [
   'BUG',
   'FEATURE_REQUEST',
@@ -133,7 +156,8 @@ export interface TicketResponse {
   issueType?: IssueType;
   priority?: Priority;
   status?: TicketStatus;
-  businessImpact?: string;
+  /** Absent when the requester did not say, which is not the same as `SINGLE_USER`. */
+  businessImpact?: BusinessImpact;
   expectedBy?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -159,7 +183,8 @@ export interface CreateTicketRequest {
   description: string;
   issueType: IssueType;
   priority: Priority;
-  businessImpact?: string;
+  /** Optional. Omit it rather than sending `''`, which the API rejects as an unknown constant. */
+  businessImpact?: BusinessImpact;
   expectedBy?: string;
   applicationId: number;
   moduleName: string;
@@ -170,12 +195,25 @@ export interface UpdateTicketStatusRequest {
   remarks?: string;
 }
 
-/** Filters for `GET /api/tickets`. `assignedTo` and `raisedBy` take user ids, not names. */
+/**
+ * Filters for `GET /api/tickets`. `assignedTo` and `raisedBy` take user ids, not names.
+ *
+ * <p>`q` is a case-insensitive substring match over ticket number, title and description. It is
+ * ANDed with the rest, so it narrows them, and it is matched as literal text - `%` and `_` mean
+ * those characters rather than wildcards. Sending it blank is the same as not sending it: `toParams`
+ * drops empty strings, and the API normalises a whitespace-only one to no filter regardless.
+ *
+ * <p><strong>It does not widen what the caller may see.</strong> As with the rest of the list, the
+ * ownership restriction is applied server-side and ANDed with this, so a search cannot reach a ticket
+ * the user could not already open. Worth stating because a search box invites the opposite
+ * assumption - that it looks everywhere.
+ */
 export interface TicketFilters {
   status?: TicketStatus;
   priority?: Priority;
   assignedTo?: number;
   raisedBy?: number;
+  q?: string;
 }
 
 /**

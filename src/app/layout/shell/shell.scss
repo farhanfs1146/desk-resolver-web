@@ -422,10 +422,6 @@
   flex: 1 1 auto;
 }
 
-.header-cta {
-  margin-right: 0.25rem;
-}
-
 .header-account {
   display: flex;
   align-items: center;
@@ -453,12 +449,6 @@
 @media (max-width: 639px) {
   .app-header {
     padding-inline: 0.5rem;
-  }
-
-  // Icon only below 640px. The button keeps its accessible name from the anchor's text, which stays
-  // in the DOM - this hides the label, it does not remove it.
-  .header-cta .cta-label {
-    display: none;
   }
 
   .header-icon {

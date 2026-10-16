@@ -13,6 +13,8 @@ import { Router, RouterLink } from '@angular/router';
 import { Applications } from '../../../core/api/applications';
 import {
   ApplicationResponse,
+  BUSINESS_IMPACTS,
+  BusinessImpact,
   CreateTicketRequest,
   ISSUE_TYPES,
   IssueType,
@@ -26,7 +28,6 @@ import { Auth } from '../../../core/auth/auth';
 
 /** The API's own limits, mirrored so the form says so before the server has to. */
 const TITLE_MAX = 100;
-const BUSINESS_IMPACT_MAX = 50;
 
 @Component({
   selector: 'app-ticket-create',
@@ -54,7 +55,7 @@ export class TicketCreate {
   protected readonly issueTypes = ISSUE_TYPES;
   protected readonly priorities = PRIORITIES;
   protected readonly titleMax = TITLE_MAX;
-  protected readonly businessImpactMax = BUSINESS_IMPACT_MAX;
+  protected readonly businessImpacts = BUSINESS_IMPACTS;
 
   /**
    * The picker needs the catalogue, which needs `APPLICATION_READ`.
@@ -86,7 +87,11 @@ export class TicketCreate {
     description: ['', [Validators.required]],
     issueType: this.formBuilder.control<IssueType | null>(null, Validators.required),
     priority: this.formBuilder.control<Priority | null>(null, Validators.required),
-    businessImpact: ['', [Validators.maxLength(BUSINESS_IMPACT_MAX)]],
+    // A drop-down, and still optional - so `null` is a legitimate value rather than an unfilled
+    // one, and there is no `Validators.required` to go with it. It used to be a text box with a
+    // 50-character limit and a placeholder reading "e.g. Department-level"; see BUSINESS_IMPACTS for
+    // what that produced in practice.
+    businessImpact: this.formBuilder.control<BusinessImpact | null>(null),
     // A `datetime-local` value: "2026-10-20T17:00", with no zone. Converted on submit.
     expectedBy: [''],
   });
@@ -148,7 +153,9 @@ export class TicketCreate {
       description: value.description.trim(),
       issueType: value.issueType as IssueType,
       priority: value.priority as Priority,
-      businessImpact: value.businessImpact.trim() || undefined,
+      // `undefined`, never `null` or `''`: the API treats an absent field as "not stated" and an
+      // empty string as a constant it does not have, which is a 400.
+      businessImpact: value.businessImpact ?? undefined,
       expectedBy: toInstant(value.expectedBy),
     };
 

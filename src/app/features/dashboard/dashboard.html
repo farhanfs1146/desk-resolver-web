@@ -20,12 +20,6 @@
       >
         <mat-icon>refresh</mat-icon>
       </button>
-      @if (canCreate()) {
-        <a matButton="filled" routerLink="/tickets/new">
-          <mat-icon>add</mat-icon>
-          Raise a ticket
-        </a>
-      }
     </div>
   </header>
 
@@ -122,9 +116,10 @@
             <div class="state-block">
               <mat-icon>inbox</mat-icon>
               <p>There are no tickets to summarise yet.</p>
-              @if (canCreate()) {
-                <a matButton="filled" routerLink="/tickets/new">Raise the first one</a>
-              }
+              <!-- Points at the tickets screen rather than straight at the form. Raising a ticket is
+                   offered in exactly one place now, and this is not it - an empty state with no way
+                   forward would be a dead end, so it leads to where the action lives. -->
+              <a matButton routerLink="/tickets">Go to tickets</a>
             </div>
           }
         </div>
